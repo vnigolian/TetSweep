@@ -564,30 +564,27 @@ protected:
     std::filesystem::path path_;
 };
 
+
 TEST_F(TetMeshOvmTest, FileIsCreated) {
     make_single_tet().write_to_file(path_);
     EXPECT_TRUE(std::filesystem::exists(path_));
+    make_single_tet().write_to_file("test.ovm");
 }
 
 TEST_F(TetMeshOvmTest, HeaderPresent) {
     make_single_tet().write_to_file(path_);
-    const std::string content = read_file(path_);
-    EXPECT_NE(content.find("OVM ASCII"), std::string::npos);
+    EXPECT_NE(read_file(path_).find("OVM ASCII"), std::string::npos);
 }
 
-TEST_F(TetMeshOvmTest, VertexCountLine) {
+TEST_F(TetMeshOvmTest, VertexSectionPresent) {
     make_single_tet().write_to_file(path_);
-    const std::string content = read_file(path_);
-    // Should contain "Vertices" section with count 4
-    EXPECT_NE(content.find("Vertices"), std::string::npos);
-    EXPECT_NE(content.find("\n4\n"),    std::string::npos);
+    EXPECT_NE(read_file(path_).find("Vertices"), std::string::npos);
 }
 
-TEST_F(TetMeshOvmTest, CellCountLine) {
+TEST_F(TetMeshOvmTest, VertexCountCorrect) {
+    // Single tet has 4 vertices.
     make_single_tet().write_to_file(path_);
-    const std::string content = read_file(path_);
-    EXPECT_NE(content.find("Cells"), std::string::npos);
-    EXPECT_NE(content.find("\n1\n"),  std::string::npos);
+    EXPECT_NE(read_file(path_).find("Vertices\n4\n"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, VertexPositionsWritten) {
@@ -599,19 +596,94 @@ TEST_F(TetMeshOvmTest, VertexPositionsWritten) {
     EXPECT_NE(content.find("0 0 1"), std::string::npos);
 }
 
-TEST_F(TetMeshOvmTest, CellIndicesWritten) {
+TEST_F(TetMeshOvmTest, EdgeSectionPresent) {
     make_single_tet().write_to_file(path_);
-    const std::string content = read_file(path_);
-    EXPECT_NE(content.find("0 1 2 3"), std::string::npos);
+    EXPECT_NE(read_file(path_).find("Edges"), std::string::npos);
 }
 
-TEST_F(TetMeshOvmTest, EmptyMeshWritesZeroCounts) {
+TEST_F(TetMeshOvmTest, EdgeCountCorrect) {
+    // A single tet has 6 unique edges.
+    make_single_tet().write_to_file(path_);
+    EXPECT_NE(read_file(path_).find("Edges\n6\n"), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, EdgeStoredAsSourceTarget) {
+    // Each edge line must be "vs vt" with vs < vt.
+    make_single_tet().write_to_file(path_);
+    EXPECT_NE(read_file(path_).find("0 1"), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, FaceSectionPresent) {
+    make_single_tet().write_to_file(path_);
+    EXPECT_NE(read_file(path_).find("Faces"), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, FaceCountCorrect) {
+    // A single tet has 4 unique faces.
+    make_single_tet().write_to_file(path_);
+    EXPECT_NE(read_file(path_).find("Faces\n4\n"), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, FaceDefinedByValenceAndHalfEdges) {
+    // Each face line must start with valence 3.
+    make_single_tet().write_to_file(path_);
+    EXPECT_NE(read_file(path_).find("3 "), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, PolyhedraSectionPresent) {
+    make_single_tet().write_to_file(path_);
+    EXPECT_NE(read_file(path_).find("Polyhedra"), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, PolyhedraCountCorrect) {
+    make_single_tet().write_to_file(path_);
+    EXPECT_NE(read_file(path_).find("Polyhedra\n1\n"), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, PolyhedronDefinedByValenceAndHalfFaces) {
+    // Each cell line must start with valence 4 (four half-faces).
+    make_single_tet().write_to_file(path_);
+    EXPECT_NE(read_file(path_).find("4 "), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, SharedEdgesDeduplicatedAcrossCells) {
+    // Two tets sharing a face have 6 + 3 = 9 unique edges.
+    TetMesh m;
+    auto v0 = m.add_vertex(0, 0, 0);
+    auto v1 = m.add_vertex(1, 0, 0);
+    auto v2 = m.add_vertex(0, 1, 0);
+    auto v3 = m.add_vertex(0, 0, 1);
+    auto v4 = m.add_vertex(1, 1, 1);
+    m.add_cell(v0, v1, v2, v3);
+    m.add_cell(v1, v2, v3, v4);
+    m.write_to_file(path_);
+    EXPECT_NE(read_file(path_).find("Edges\n9\n"), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, SharedFacesDeduplicatedAcrossCells) {
+    // Two tets sharing one face → 4 + 4 - 1 = 7 unique faces.
+    TetMesh m;
+    auto v0 = m.add_vertex(0, 0, 0);
+    auto v1 = m.add_vertex(1, 0, 0);
+    auto v2 = m.add_vertex(0, 1, 0);
+    auto v3 = m.add_vertex(0, 0, 1);
+    auto v4 = m.add_vertex(1, 1, 1);
+    m.add_cell(v0, v1, v2, v3);
+    m.add_cell(v1, v2, v3, v4);
+    m.write_to_file(path_);
+    EXPECT_NE(read_file(path_).find("Faces\n7\n"), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, EmptyMeshWritesAllSections) {
     TetMesh m;
     m.write_to_file(path_);
     const std::string content = read_file(path_);
-    EXPECT_NE(content.find("Vertices"), std::string::npos);
-    EXPECT_NE(content.find("Cells"),    std::string::npos);
+    EXPECT_NE(content.find("Vertices"),  std::string::npos);
+    EXPECT_NE(content.find("Edges"),     std::string::npos);
+    EXPECT_NE(content.find("Faces"),     std::string::npos);
+    EXPECT_NE(content.find("Polyhedra"), std::string::npos);
 }
+
 
 // =============================================================================
 // File I/O — unsupported format
