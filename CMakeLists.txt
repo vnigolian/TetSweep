@@ -4,7 +4,7 @@ set(FETCHCONTENT_QUIET OFF)
 set(EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
 set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
 
-project(TetMeshGenerator)
+project(TetWeave)
 cmake_minimum_required(VERSION 3.19)
 
 
@@ -31,8 +31,6 @@ if(NOT TARGET argparse)
 endif()
 
 
-#message("Copying parameters file to build folder...")
-#configure_file("SAE-parameters-brutus.json" ${CMAKE_CURRENT_BINARY_DIR}/SAE-parameters.json COPYONLY)
 
 FILE(GLOB SOURCE_FILES
         src/*.cc
@@ -41,10 +39,9 @@ FILE(GLOB SOURCE_FILES
 include_directories(src/)
 
 
-add_library (TetMeshGenerator ${SOURCE_FILES})
-target_link_libraries (TetMeshGenerator PUBLIC
+add_library (TetWeave ${SOURCE_FILES})
+target_link_libraries (TetWeave PUBLIC
         argparse
-       # acutest
 )
 
 
@@ -53,8 +50,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-fsanitize=address -fsanitize=undefined)
     add_link_options(-fsanitize=address -fsanitize=undefined)
 
-    target_compile_options(TetMeshGenerator PRIVATE -fsanitize=address -fsanitize=undefined)
-    target_link_options(TetMeshGenerator PRIVATE -fsanitize=address -fsanitize=undefined)
+    target_compile_options(TetWeave PRIVATE -fsanitize=address -fsanitize=undefined)
+    target_link_options(TetWeave PRIVATE -fsanitize=address -fsanitize=undefined)
 endif()
 
 add_subdirectory(cli)

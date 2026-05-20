@@ -31,7 +31,7 @@ enable_testing()
 
 add_executable(unit_tests unit_tests.cc)
 target_link_libraries(unit_tests
-        TetMeshGenerator
+        TetWeave
         GTest::gtest_main
 )
 

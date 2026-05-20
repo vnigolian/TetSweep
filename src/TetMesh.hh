@@ -1,9 +1,13 @@
 #include "includes.hh"
 
-#include <vector>
+
+namespace tet_weave {
+    class TetMesh{
+
+    public:
+
+    private:
 
 
-class TetMesh{
-
-
-};
+    };
+}
