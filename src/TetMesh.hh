@@ -1,4 +1,5 @@
 #include "includes.hh"
+#include "Vec3d.hh"
 
 
 namespace tet_weave {
@@ -7,6 +8,8 @@ namespace tet_weave {
     public:
 
     private:
+
+        std::vector<Vec3d> vertices_;
 
 
     };

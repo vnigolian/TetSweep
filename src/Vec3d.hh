@@ -138,6 +138,21 @@ public:
     }
 
     // -------------------------------------------------------------------------
+    // Rotation — Rodrigues' formula
+    // -------------------------------------------------------------------------
+
+    /// Returns a copy of this vector rotated by `angle` radians around `axis`.
+    /// `axis` does not need to be unit-length; it is normalized internally.
+    /// The rotation direction follows the right-hand rule.
+    Vec3d rotate(Vec3d axis, double angle) const {
+        const Vec3d k   = axis.normalized();
+        const double c  = std::cos(angle);
+        const double s  = std::sin(angle);
+        // v' = v·cosθ + (k × v)·sinθ + k·(k·v)·(1 − cosθ)
+        return (*this) * c + k.cross(*this) * s + k * k.dot(*this) * (1.0 - c);
+    }
+
+    // -------------------------------------------------------------------------
     // Equality (exact, for tests — use with care on computed values)
     // -------------------------------------------------------------------------
 
@@ -147,10 +162,7 @@ public:
 
     bool operator!=(const Vec3d& rhs) const { return !(*this == rhs); }
 
-    // -------------------------------------------------------------------------
-    // Data members
-    // -------------------------------------------------------------------------
-
+private:
     double x_, y_, z_;
 };
 

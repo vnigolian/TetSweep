@@ -16,12 +16,12 @@ TEST(CompileTest, BasicTest) {
   EXPECT_EQ(7 * 6, 42);
 }
 
-
 // =============================================================================
 // Helpers
 // =============================================================================
 
 static constexpr double epsilon = 1e-12;
+static constexpr double M_PI_   = 3.14159265358979323846;
 
 /// Expect two Vec3d values to be component-wise close.
 static void ExpectNear(const Vec3d& a, const Vec3d& b, double tol = epsilon) {
@@ -42,16 +42,16 @@ TEST(Vec3dTest, DefaultConstructorExists) {
 
 TEST(Vec3dTest, ComponentConstructor) {
     Vec3d v(1.0, 2.0, 3.0);
-    EXPECT_DOUBLE_EQ(v.x_, 1.0);
-    EXPECT_DOUBLE_EQ(v.y_, 2.0);
-    EXPECT_DOUBLE_EQ(v.z_, 3.0);
+    EXPECT_DOUBLE_EQ(v.x(), 1.0);
+    EXPECT_DOUBLE_EQ(v.y(), 2.0);
+    EXPECT_DOUBLE_EQ(v.z(), 3.0);
 }
 
 TEST(Vec3dTest, BraceInitialization) {
     Vec3d v = {4.0, 5.0, 6.0};
-    EXPECT_DOUBLE_EQ(v.x_, 4.0);
-    EXPECT_DOUBLE_EQ(v.y_, 5.0);
-    EXPECT_DOUBLE_EQ(v.z_, 6.0);
+    EXPECT_DOUBLE_EQ(v.x(), 4.0);
+    EXPECT_DOUBLE_EQ(v.y(), 5.0);
+    EXPECT_DOUBLE_EQ(v.z(), 6.0);
 }
 
 TEST(Vec3dTest, CopyConstructor) {
@@ -70,9 +70,9 @@ TEST(Vec3dTest, CopyAssignment) {
 TEST(Vec3dTest, MoveConstructor) {
     Vec3d a(7.0, 8.0, 9.0);
     Vec3d b(std::move(a));
-    EXPECT_DOUBLE_EQ(b.x_, 7.0);
-    EXPECT_DOUBLE_EQ(b.y_, 8.0);
-    EXPECT_DOUBLE_EQ(b.z_, 9.0);
+    EXPECT_DOUBLE_EQ(b.x(), 7.0);
+    EXPECT_DOUBLE_EQ(b.y(), 8.0);
+    EXPECT_DOUBLE_EQ(b.z(), 9.0);
 }
 
 // =============================================================================
@@ -91,9 +91,9 @@ TEST(Vec3dTest, MutableAccessors) {
     v.x() = 10.0;
     v.y() = 20.0;
     v.z() = 30.0;
-    EXPECT_DOUBLE_EQ(v.x_, 10.0);
-    EXPECT_DOUBLE_EQ(v.y_, 20.0);
-    EXPECT_DOUBLE_EQ(v.z_, 30.0);
+    EXPECT_DOUBLE_EQ(v.x(), 10.0);
+    EXPECT_DOUBLE_EQ(v.y(), 20.0);
+    EXPECT_DOUBLE_EQ(v.z(), 30.0);
 }
 
 // =============================================================================
@@ -112,30 +112,18 @@ TEST(Vec3dTest, SubscriptWrite) {
     v[0] = 5.0;
     v[1] = 6.0;
     v[2] = 7.0;
-    EXPECT_DOUBLE_EQ(v.x_, 5.0);
-    EXPECT_DOUBLE_EQ(v.y_, 6.0);
-    EXPECT_DOUBLE_EQ(v.z_, 7.0);
+    EXPECT_DOUBLE_EQ(v.x(), 5.0);
+    EXPECT_DOUBLE_EQ(v.y(), 6.0);
+    EXPECT_DOUBLE_EQ(v.z(), 7.0);
 }
 
 TEST(Vec3dTest, SubscriptMapsToCorrectComponents) {
     // Verify that layout (&x_)[i] gives the expected addresses.
     Vec3d v(1.0, 2.0, 3.0);
-    EXPECT_EQ(&v[0], &v.x_);
-    EXPECT_EQ(&v[1], &v.y_);
-    EXPECT_EQ(&v[2], &v.z_);
+    EXPECT_EQ(&v[0], &v.x());
+    EXPECT_EQ(&v[1], &v.y());
+    EXPECT_EQ(&v[2], &v.z());
 }
-
-#ifndef NDEBUG
-TEST(Vec3dTest, SubscriptAssertNegativeIndex) {
-    Vec3d v(1.0, 2.0, 3.0);
-    EXPECT_DEATH(v[-1], "");
-}
-
-TEST(Vec3dTest, SubscriptAssertIndexTooLarge) {
-    Vec3d v(1.0, 2.0, 3.0);
-    EXPECT_DEATH(v[3], "");
-}
-#endif
 
 // =============================================================================
 // Equality
@@ -288,8 +276,8 @@ TEST(Vec3dTest, NormalizedReturnsUnitLength) {
 TEST(Vec3dTest, NormalizedDoesNotMutate) {
     Vec3d v(3, 4, 0);
     [[maybe_unused]] Vec3d u = v.normalized();
-    EXPECT_DOUBLE_EQ(v.x_, 3.0);  // original unchanged
-    EXPECT_DOUBLE_EQ(v.y_, 4.0);
+    EXPECT_DOUBLE_EQ(v.x(), 3.0);
+    EXPECT_DOUBLE_EQ(v.y(), 4.0);
 }
 
 TEST(Vec3dTest, NormalizedDirection) {
@@ -315,7 +303,77 @@ TEST(Vec3dTest, NormalizedAlreadyUnit) {
     ExpectNear(v.normalized(), Vec3d(1, 0, 0));
 }
 
+// =============================================================================
+// Rotation (Rodrigues' formula)
+// =============================================================================
+
+TEST(Vec3dTest, RotateZeroAngle) {
+    // Zero rotation leaves the vector unchanged.
+    Vec3d v(1, 2, 3);
+    ExpectNear(v.rotate(Vec3d(0, 0, 1), 0.0), v);
+}
+
+TEST(Vec3dTest, RotateFullCircle) {
+    // 2π rotation returns the original vector.
+    Vec3d v(1, 2, 3);
+    ExpectNear(v.rotate(Vec3d(0, 0, 1), 2.0 * M_PI_), v, 1e-10);
+}
+
+TEST(Vec3dTest, RotateXAxisBy90AroundZ) {
+    // x rotated 90° around z → y
+    ExpectNear(Vec3d(1, 0, 0).rotate(Vec3d(0, 0, 1), M_PI_ / 2.0), Vec3d(0, 1, 0), 1e-10);
+}
+
+TEST(Vec3dTest, RotateXAxisBy180AroundZ) {
+    // x rotated 180° around z → -x
+    ExpectNear(Vec3d(1, 0, 0).rotate(Vec3d(0, 0, 1), M_PI_), Vec3d(-1, 0, 0), 1e-10);
+}
+
+TEST(Vec3dTest, RotateYAxisBy90AroundX) {
+    // y rotated 90° around x → z (right-hand rule)
+    ExpectNear(Vec3d(0, 1, 0).rotate(Vec3d(1, 0, 0), M_PI_ / 2.0), Vec3d(0, 0, 1), 1e-10);
+}
+
+TEST(Vec3dTest, RotateAxisAlignedVectorAroundItself) {
+    // Rotating a vector around its own axis leaves it unchanged.
+    Vec3d v(0, 0, 5);
+    ExpectNear(v.rotate(Vec3d(0, 0, 1), M_PI_ / 3.0), v, 1e-10);
+}
+
+TEST(Vec3dTest, RotatePreservesNorm) {
+    // Rotation is isometric — length must be preserved.
+    Vec3d v(1, 2, 3);
+    EXPECT_NEAR(v.rotate(Vec3d(1, 1, 0), M_PI_ / 4.0).norm(), v.norm(), 1e-10);
+}
+
+TEST(Vec3dTest, RotateWithNonUnitAxis) {
+    // Passing a non-unit axis should give the same result as the normalized one.
+    Vec3d v(1, 0, 0);
+    Vec3d axis(0, 0, 5);  // scaled z-axis
+    ExpectNear(v.rotate(axis, M_PI_ / 2.0), Vec3d(0, 1, 0), 1e-10);
+}
+
+TEST(Vec3dTest, RotateDoesNotMutate) {
+    Vec3d v(1, 2, 3);
+    [[maybe_unused]] Vec3d r = v.rotate(Vec3d(0, 1, 0), M_PI_ / 4.0);
+    ExpectNear(v, Vec3d(1, 2, 3));
+}
+
+// =============================================================================
+// Debug-only assertion tests (compiled out when NDEBUG is defined)
+// =============================================================================
+
 #ifndef NDEBUG
+TEST(Vec3dTest, SubscriptAssertNegativeIndex) {
+    Vec3d v(1.0, 2.0, 3.0);
+    EXPECT_DEATH(v[-1], "");
+}
+
+TEST(Vec3dTest, SubscriptAssertIndexTooLarge) {
+    Vec3d v(1.0, 2.0, 3.0);
+    EXPECT_DEATH(v[3], "");
+}
+
 TEST(Vec3dTest, NormalizedZeroVectorAsserts) {
     EXPECT_DEATH(Vec3d(0, 0, 0).normalized(), "");
 }
@@ -324,16 +382,21 @@ TEST(Vec3dTest, NormalizeInPlaceZeroVectorAsserts) {
     Vec3d v(0, 0, 0);
     EXPECT_DEATH(v.normalize(), "");
 }
+
+TEST(Vec3dTest, RotateZeroAxisAsserts) {
+    EXPECT_DEATH(Vec3d(1, 0, 0).rotate(Vec3d(0, 0, 0), M_PI_ / 2.0), "");
+}
 #endif
+
 
 TEST(TetMeshTest, DeclareMesh){
 	TetMesh mesh;
 }
 
 
-/*
+
 TEST(TetMeshTest, AddVertices){
     TetMesh mesh;
-    auto v0 = mesh.add_vertex(1,2,3);
-}*/
+    //auto v0 = mesh.add_vertex(1,2,3);
+}
 
