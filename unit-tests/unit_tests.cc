@@ -5,6 +5,7 @@
 
 #include "Vec3d.hh"
 #include "TetMesh.hh"
+#include "VoxelGridMeshGen.hh"
 
 
 
@@ -647,3 +648,61 @@ TEST(TetMeshTest, CellAccessorInvalidHandleAsserts) {
     EXPECT_DEATH(m.cell(CellHandle(0)), "");
 }
 #endif
+
+
+TEST(VoxelGridMeshGenTest, SingleVoxelMesh) {
+    TetMesh mesh = VoxelGridMeshGen::generate_voxel_grid_mesh(1,1,1);
+    EXPECT_EQ(mesh.n_vertices(), 8);
+    EXPECT_EQ(mesh.n_cells(), 5);
+}
+
+TEST(VoxelGridMeshGenTest, VariableSizedGrids) {
+    const int N(10);
+    for (int i(1); i<N; i++) {
+        for (int j(0); j<N; j++) {
+            for (int k(0); k<N; k++) {
+
+                TetMesh mesh = VoxelGridMeshGen::generate_voxel_grid_mesh(i,j,k);
+                EXPECT_EQ(mesh.n_vertices(), (i+1) * (j+1) * (k+1));
+                EXPECT_EQ(mesh.n_cells(), 5 * i * j * k);
+            }
+        }
+    }
+}
+
+
+TEST(VoxelGridMeshGenTest, KnottedHoles) {
+    std::vector<int> cell_counts = {
+        1575,
+        1555,
+        1545,
+        1525,
+        1515,
+        1495,
+        1465,
+        1445,
+        1425,
+        1415,
+        1405
+    };
+
+    const int n_vertices = 480; //(10 * 8 * 6)
+
+    for (int i(0); i<cell_counts.size(); i++) {
+        TetMesh mesh = VoxelGridMeshGen::generate_Furchs_knotted_hole(i);
+        EXPECT_EQ(mesh.n_vertices(), n_vertices);
+        EXPECT_EQ(mesh.n_cells(), cell_counts[i]);
+    }
+}
+
+
+TEST(VoxelGridMeshGenTest, KnottedHoleExport) {
+    auto mesh = VoxelGridMeshGen::generate_Furchs_knotted_hole();
+    const int n_vertices = 480; //(10 * 8 * 6)
+
+    EXPECT_EQ(mesh.n_vertices(), 480);
+    EXPECT_EQ(mesh.n_cells(), 1405);
+
+    mesh.write_to_file("knotted_hole.ovm");
+
+}

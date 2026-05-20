@@ -1,6 +1,5 @@
 
-#include "TestMeshGenerators.hh"
-#include "FurchsKnotGenerator.hh"
+#include "VoxelGridMeshGen.hh"
 
 
 int parse_args(int argc, char** argv, argparse::ArgumentParser& parser);

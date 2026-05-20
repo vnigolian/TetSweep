@@ -147,7 +147,7 @@ private:
     // -------------------------------------------------------------------------
 
     std::vector<Vec3d> vertices_;
-    std::vector<Cell>          cells_;
+    std::vector<Cell>  cells_;
 };
 
 } // namespace tet_weave

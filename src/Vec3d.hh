@@ -171,4 +171,4 @@ private:
 // -----------------------------------------------------------------------------
 inline Vec3d operator*(double s, const Vec3d& v) { return v * s; }
 
-} // namespace tetgen
+} // namespace tet_weave
