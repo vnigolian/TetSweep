@@ -6,6 +6,8 @@
 #include "Vec3d.hh"
 #include "TetMesh.hh"
 
+
+
 using namespace tet_weave;
 
 //from googletest primer
@@ -389,14 +391,259 @@ TEST(Vec3dTest, RotateZeroAxisAsserts) {
 #endif
 
 
-TEST(TetMeshTest, DeclareMesh){
-	TetMesh mesh;
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/// Read a file into a string.
+static std::string read_file(const std::filesystem::path& p) {
+    std::ifstream f(p);
+    std::ostringstream ss;
+    ss << f.rdbuf();
+    return ss.str();
 }
 
-
-
-TEST(TetMeshTest, AddVertices){
-    TetMesh mesh;
-    //auto v0 = mesh.add_vertex(1,2,3);
+/// Build a minimal valid tetrahedron and return the mesh.
+static TetMesh make_single_tet() {
+    TetMesh m;
+    auto v0 = m.add_vertex(0, 0, 0);
+    auto v1 = m.add_vertex(1, 0, 0);
+    auto v2 = m.add_vertex(0, 1, 0);
+    auto v3 = m.add_vertex(0, 0, 1);
+    m.add_cell(v0, v1, v2, v3);
+    return m;
 }
 
+// =============================================================================
+// VertexHandle
+// =============================================================================
+
+TEST(VertexHandleTest, DefaultInvalid) {
+    EXPECT_FALSE(VertexHandle().is_valid());
+}
+
+TEST(VertexHandleTest, ExplicitValid) {
+    EXPECT_TRUE(VertexHandle(0).is_valid());
+    EXPECT_TRUE(VertexHandle(42).is_valid());
+}
+
+TEST(VertexHandleTest, Equality) {
+    EXPECT_EQ(VertexHandle(3), VertexHandle(3));
+    EXPECT_NE(VertexHandle(3), VertexHandle(4));
+}
+
+// =============================================================================
+// CellHandle
+// =============================================================================
+
+TEST(CellHandleTest, DefaultInvalid) {
+    EXPECT_FALSE(CellHandle().is_valid());
+}
+
+TEST(CellHandleTest, ExplicitValid) {
+    EXPECT_TRUE(CellHandle(0).is_valid());
+}
+
+TEST(CellHandleTest, Equality) {
+    EXPECT_EQ(CellHandle(1), CellHandle(1));
+    EXPECT_NE(CellHandle(1), CellHandle(2));
+}
+
+// =============================================================================
+// Vertices
+// =============================================================================
+
+TEST(TetMeshTest, EmptyMesh) {
+    TetMesh m;
+    EXPECT_EQ(m.n_vertices(), 0);
+    EXPECT_EQ(m.n_cells(), 0);
+}
+
+TEST(TetMeshTest, AddVertexVec3d) {
+    TetMesh m;
+    auto vh = m.add_vertex(Vec3d(1, 2, 3));
+    EXPECT_TRUE(vh.is_valid());
+    EXPECT_EQ(vh.idx(), 0);
+    EXPECT_EQ(m.n_vertices(), 1);
+}
+
+TEST(TetMeshTest, AddVertexXYZ) {
+    TetMesh m;
+    auto vh = m.add_vertex(4, 5, 6);
+    EXPECT_TRUE(vh.is_valid());
+    EXPECT_EQ(m.n_vertices(), 1);
+}
+
+TEST(TetMeshTest, AddVertexReturnsCorrectHandle) {
+    TetMesh m;
+    auto v0 = m.add_vertex(0, 0, 0);
+    auto v1 = m.add_vertex(1, 0, 0);
+    auto v2 = m.add_vertex(2, 0, 0);
+    EXPECT_EQ(v0.idx(), 0);
+    EXPECT_EQ(v1.idx(), 1);
+    EXPECT_EQ(v2.idx(), 2);
+}
+
+TEST(TetMeshTest, VertexPositionRoundtrip) {
+    TetMesh m;
+    auto vh = m.add_vertex(1.5, 2.5, 3.5);
+    EXPECT_DOUBLE_EQ(m.vertex(vh).x(), 1.5);
+    EXPECT_DOUBLE_EQ(m.vertex(vh).y(), 2.5);
+    EXPECT_DOUBLE_EQ(m.vertex(vh).z(), 3.5);
+}
+
+TEST(TetMeshTest, MultipleVerticesStoredIndependently) {
+    TetMesh m;
+    auto v0 = m.add_vertex(1, 0, 0);
+    auto v1 = m.add_vertex(0, 2, 0);
+    EXPECT_DOUBLE_EQ(m.vertex(v0).x(), 1.0);
+    EXPECT_DOUBLE_EQ(m.vertex(v1).y(), 2.0);
+}
+
+// =============================================================================
+// Cells
+// =============================================================================
+
+TEST(TetMeshTest, AddCellReturnsValidHandle) {
+    TetMesh m = make_single_tet();
+    EXPECT_EQ(m.n_cells(), 1);
+}
+
+TEST(TetMeshTest, AddCellHandleIndex) {
+    TetMesh m = make_single_tet();
+    // First cell should have index 0
+    auto v0 = m.add_vertex(2, 0, 0);
+    auto v1 = m.add_vertex(3, 0, 0);
+    auto v2 = m.add_vertex(4, 0, 0);
+    auto v3 = m.add_vertex(5, 0, 0);
+    auto ch = m.add_cell(v0, v1, v2, v3);
+    EXPECT_EQ(ch.idx(), 1);
+}
+
+TEST(TetMeshTest, CellVertexHandlesRoundtrip) {
+    TetMesh m;
+    auto v0 = m.add_vertex(0, 0, 0);
+    auto v1 = m.add_vertex(1, 0, 0);
+    auto v2 = m.add_vertex(0, 1, 0);
+    auto v3 = m.add_vertex(0, 0, 1);
+    auto ch = m.add_cell(v0, v1, v2, v3);
+
+    const auto& c = m.cell(ch);
+    EXPECT_EQ(c[0], v0);
+    EXPECT_EQ(c[1], v1);
+    EXPECT_EQ(c[2], v2);
+    EXPECT_EQ(c[3], v3);
+}
+
+TEST(TetMeshTest, MultipleCells) {
+    TetMesh m;
+    auto v0 = m.add_vertex(0, 0, 0);
+    auto v1 = m.add_vertex(1, 0, 0);
+    auto v2 = m.add_vertex(0, 1, 0);
+    auto v3 = m.add_vertex(0, 0, 1);
+    auto v4 = m.add_vertex(1, 1, 1);
+
+    m.add_cell(v0, v1, v2, v3);
+    m.add_cell(v1, v2, v3, v4);
+    EXPECT_EQ(m.n_cells(), 2);
+}
+
+// =============================================================================
+// File I/O — .ovm
+// =============================================================================
+
+class TetMeshOvmTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        path_ = std::filesystem::temp_directory_path() / "tet_weave_test.ovm";
+    }
+    void TearDown() override {
+        std::filesystem::remove(path_);
+    }
+    std::filesystem::path path_;
+};
+
+TEST_F(TetMeshOvmTest, FileIsCreated) {
+    make_single_tet().write_to_file(path_);
+    EXPECT_TRUE(std::filesystem::exists(path_));
+}
+
+TEST_F(TetMeshOvmTest, HeaderPresent) {
+    make_single_tet().write_to_file(path_);
+    const std::string content = read_file(path_);
+    EXPECT_NE(content.find("OVM ASCII"), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, VertexCountLine) {
+    make_single_tet().write_to_file(path_);
+    const std::string content = read_file(path_);
+    // Should contain "Vertices" section with count 4
+    EXPECT_NE(content.find("Vertices"), std::string::npos);
+    EXPECT_NE(content.find("\n4\n"),    std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, CellCountLine) {
+    make_single_tet().write_to_file(path_);
+    const std::string content = read_file(path_);
+    EXPECT_NE(content.find("Cells"), std::string::npos);
+    EXPECT_NE(content.find("\n1\n"),  std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, VertexPositionsWritten) {
+    make_single_tet().write_to_file(path_);
+    const std::string content = read_file(path_);
+    EXPECT_NE(content.find("0 0 0"), std::string::npos);
+    EXPECT_NE(content.find("1 0 0"), std::string::npos);
+    EXPECT_NE(content.find("0 1 0"), std::string::npos);
+    EXPECT_NE(content.find("0 0 1"), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, CellIndicesWritten) {
+    make_single_tet().write_to_file(path_);
+    const std::string content = read_file(path_);
+    EXPECT_NE(content.find("0 1 2 3"), std::string::npos);
+}
+
+TEST_F(TetMeshOvmTest, EmptyMeshWritesZeroCounts) {
+    TetMesh m;
+    m.write_to_file(path_);
+    const std::string content = read_file(path_);
+    EXPECT_NE(content.find("Vertices"), std::string::npos);
+    EXPECT_NE(content.find("Cells"),    std::string::npos);
+}
+
+// =============================================================================
+// File I/O — unsupported format
+// =============================================================================
+
+TEST(TetMeshTest, UnsupportedExtensionThrows) {
+    TetMesh m = make_single_tet();
+    EXPECT_THROW(
+        m.write_to_file(std::filesystem::temp_directory_path() / "out.xyz"),
+        std::runtime_error);
+}
+
+// =============================================================================
+// Debug-only assertion tests
+// =============================================================================
+
+#ifndef NDEBUG
+TEST(TetMeshTest, AddCellInvalidHandleAsserts) {
+    TetMesh m;
+    auto v0 = m.add_vertex(0, 0, 0);
+    auto v1 = m.add_vertex(1, 0, 0);
+    auto v2 = m.add_vertex(0, 1, 0);
+    VertexHandle bad(-1);
+    EXPECT_DEATH(m.add_cell(v0, v1, v2, bad), "");
+}
+
+TEST(TetMeshTest, VertexAccessorInvalidHandleAsserts) {
+    TetMesh m;
+    EXPECT_DEATH(m.vertex(VertexHandle(0)), "");
+}
+
+TEST(TetMeshTest, CellAccessorInvalidHandleAsserts) {
+    TetMesh m;
+    EXPECT_DEATH(m.cell(CellHandle(0)), "");
+}
+#endif
