@@ -36,29 +36,33 @@ namespace tet_weave {
             mesh.add_cell({v5, v6, vt, vi});
             mesh.add_cell({v6, v1, vt, vi});
 
-            //mesh.split_edge(mesh.edge_handle(mesh.find_halfedge(vb, vt)));
-
-            /*ref_mesh = mesh;
-            //ref_mesh.set_vertex(VertexHandle(0), {0, 0.5,0});
-            ref_mesh.set_vertex(v1, {-1, -3,0});
-            ref_mesh.set_vertex(v2, {-2, -3,0});
-            ref_mesh.set_vertex(v5, {2, -3, 0});
-            ref_mesh.set_vertex(v6, {1, -3, 0});*/
             return mesh;
         }
 
 
-#if 0
-        void generate_rod_mesh(TetMesh &mesh,
-                               int length,
-                               double axial_scaling,
-                               double torsion){
+        TetMesh generate_minimal_non_star_shaped_domain_mesh() {
+
+            auto mesh = generate_minimal_non_star_shaped_mesh();
+
+            mesh.set_vertex(VertexHandle(1), {-1, -3,0});
+            mesh.set_vertex(VertexHandle(2), {-2, -3,0});
+            mesh.set_vertex(VertexHandle(5), {2, -3, 0});
+            mesh.set_vertex(VertexHandle(6), {1, -3, 0});
+
+            return mesh;
+        }
+
+
+        TetMesh generate_rod_mesh(int length,
+                                  double axial_scaling = 1.0,
+                                  double torsion_rad = 0.0){
 
             if(length < 1) {
                 std::cout<<" - warning, clamped mesh length to 1"<<std::endl;
                 length = 1;
             }
 
+            TetMesh mesh;
             //the only interior vertex
             auto v0 = mesh.add_vertex({0.0, 0.0, length * 0.5});
 
@@ -72,7 +76,7 @@ namespace tet_weave {
                 mesh.add_vertex({ 0.5,  0.5, i});
                 mesh.add_vertex({-0.5,  0.5, i});
             }
-            std::cout<<" - added "<<mesh.n_vertices()<<" vertices"<<std::endl;
+            //std::cout<<" - added "<<mesh.n_vertices()<<" vertices"<<std::endl;
 
             //add the first cells
             mesh.add_cell({VertexHandle(1), VertexHandle(2), VertexHandle(3), v0});
@@ -101,40 +105,41 @@ namespace tet_weave {
             }
 
             int c = (length -1) * 4;
-            std::cout<<" c = "<<c<<std::endl;
+            //std::cout<<" c = "<<c<<std::endl;
             mesh.add_cell({VertexHandle(c + 4 + 1), VertexHandle(c + 7 + 1), VertexHandle(c + 6 + 1), v0});
             mesh.add_cell({VertexHandle(c + 4 + 1), VertexHandle(c + 6 + 1), VertexHandle(c + 5 + 1), v0});
 
-            double d_rot = M_PI * (torsion / (length + 1))/180.0;
+            if (torsion_rad != 0.0) {
+                double d_rot = torsion_rad / length;
 
-            for(int i(0); i <= length; i++){
-                int start_idx = 4 * i + 1;
-                double theta = d_rot * i;
-                //std::cout<<" theta_"<<i<<" = "<<theta<<std::endl;
-                for(int j(0); j<4; j++){
-                    VertexHandle v(start_idx + j);
-                    auto pos = mesh.vertex(v);
-                    Eigen::Vector3d eigen_pos = vec2vec(pos);
-                    Eigen::Matrix3d rot;
-                    rot << std::cos(theta), -std::sin(theta), 0,
-                           std::sin(theta), std::cos(theta), 0,
-                           0,               0,               1;
-                    auto rot_pos = vec2vec((rot * eigen_pos).eval());
-                    mesh.set_vertex(v, rot_pos);
+                for(int i(0); i <= length; i++){
+                    int start_idx = 4 * i + 1;
+                    double theta = d_rot * i;
+                    //std::cout<<" theta_"<<i<<" = "<<theta<<std::endl;
+                    for(int j(0); j<4; j++){
+                        VertexHandle v(start_idx + j);
+                        auto pos = mesh.vertex(v);
+
+                        auto rot_pos = pos.rotate({0,0,1}, theta);
+                        //std::cout<<" rotated vertex "<<v.idx()<<" from "<<pos<<" to "<<rot_pos<<std::endl;
+                        mesh.set_vertex(v, rot_pos);
+                    }
                 }
             }
 
             if (axial_scaling != 1.0) {
                 for (auto vh: mesh.vertices()) {
                     auto pos = mesh.vertex(vh);
-                    pos[2] *= mesh;
+                    pos[2] *= axial_scaling;
                     mesh.set_vertex(vh, pos);
                 }
             }
 
             //std::cout<<" - added last face"<<std::endl;
+            return mesh;
         }
 
+#if 0
         void setup_sine_mesh(TetMesh& ref_mesh,
                              TetMesh& mesh,
                              int length,

@@ -577,7 +577,7 @@ TEST(TetMeshTest, CellVertexHandlesRoundtrip) {
     auto v3 = m.add_vertex(0, 0, 1);
     auto ch = m.add_cell({v0, v1, v2, v3});
 
-    const auto& c = m.cell(ch);
+    const auto& c = m.get_cell_vertices(ch);
     EXPECT_EQ(c[0], v0);
     EXPECT_EQ(c[1], v1);
     EXPECT_EQ(c[2], v2);
@@ -614,7 +614,8 @@ TEST(TetMeshTest, VerticesRangeValues) {
     m.add_vertex(1, 2, 3);
     m.add_vertex(4, 5, 6);
     int i = 0;
-    for (const auto& v : m.vertices()) {
+    for (const auto& vh : m.vertices()) {
+        auto v = m.vertex(vh);
         EXPECT_DOUBLE_EQ(v.x(), m.vertex(VertexHandle(i)).x());
         EXPECT_DOUBLE_EQ(v.y(), m.vertex(VertexHandle(i)).y());
         EXPECT_DOUBLE_EQ(v.z(), m.vertex(VertexHandle(i)).z());
@@ -637,10 +638,11 @@ TEST(TetMeshTest, CellsRangeValues) {
     auto v3 = m.add_vertex(0, 0, 1);
     m.add_cell(v0, v1, v2, v3);
     for (const auto& c : m.cells()) {
-        EXPECT_EQ(c[0], v0);
-        EXPECT_EQ(c[1], v1);
-        EXPECT_EQ(c[2], v2);
-        EXPECT_EQ(c[3], v3);
+        auto verts = m.get_cell_vertices(c);
+        EXPECT_EQ(verts[0], v0);
+        EXPECT_EQ(verts[1], v1);
+        EXPECT_EQ(verts[2], v2);
+        EXPECT_EQ(verts[3], v3);
     }
 }
 
@@ -694,24 +696,31 @@ TEST(TetMeshTest, VolumeScalesWithEdgeLength) {
 
 TEST(TetMeshTest, TotalVolumeEmptyMesh) {
     TetMesh m;
-    EXPECT_DOUBLE_EQ(m.compute_total_volume(), 0.0);
+    EXPECT_DOUBLE_EQ(m.compute_signed_volume(), 0.0);
 }
 
 TEST(TetMeshTest, TotalVolumeSingleCell) {
     TetMesh m = make_single_tet();
-    EXPECT_NEAR(m.compute_total_volume(), 1.0 / 6.0, epsilon);
+    EXPECT_NEAR(m.compute_signed_volume(), 1.0 / 6.0, epsilon);
 }
 
 TEST(TetMeshTest, TotalVolumeSingleFlippedCell) {
     TetMesh m = make_single_tet();
     m.set_vertex(VertexHandle(3), {0,0,-1});
-    EXPECT_NEAR(m.compute_total_volume(), -1.0 / 6.0, epsilon);
+    EXPECT_NEAR(m.compute_signed_volume(), -1.0 / 6.0, epsilon);
 }
 
 TEST(TetMeshTest, TotalVolumeSingleDegenerateCell) {
     TetMesh m = make_single_tet();
     m.set_vertex(VertexHandle(3), {1,1,0});
-    EXPECT_NEAR(m.compute_total_volume(), 0.0, epsilon);
+    EXPECT_NEAR(m.compute_signed_volume(), 0.0, epsilon);
+}
+
+
+TEST(TetMeshTest, TotalUnsignedVolumeSingleFlippedCell) {
+    TetMesh m = make_single_tet();
+    m.set_vertex(VertexHandle(3), {0,0,-1});
+    EXPECT_NEAR(m.compute_unsigned_volume(), 1.0 / 6.0, epsilon);
 }
 
 TEST(TetMeshTest, TotalVolumeMultipleCells) {
@@ -724,7 +733,7 @@ TEST(TetMeshTest, TotalVolumeMultipleCells) {
     auto v4 = m.add_vertex(0, 0, -1);
     m.add_cell(v0, v1, v2, v3);
     m.add_cell(v0, v2, v1, v4);
-    EXPECT_NEAR(m.compute_total_volume(), 1.0 / 3.0, epsilon);
+    EXPECT_NEAR(m.compute_signed_volume(), 1.0 / 3.0, epsilon);
 }
 
 
@@ -738,7 +747,21 @@ TEST(TetMeshTest, TotalVolumeOppositeOrientations) {
     auto v4 = m.add_vertex(0, 0, 1);
     m.add_cell(v0, v1, v2, v3);
     m.add_cell(v0, v2, v1, v4);
-    EXPECT_NEAR(m.compute_total_volume(), 0.0, epsilon);
+    EXPECT_NEAR(m.compute_signed_volume(), 0.0, epsilon);
+}
+
+
+TEST(TetMeshTest, TotalUnsignedVolumeOppositeOrientations) {
+    // Two identical canonical tets, but with opposite orientations → total = 0.0.
+    TetMesh m;
+    auto v0 = m.add_vertex(0, 0, 0);
+    auto v1 = m.add_vertex(1, 0, 0);
+    auto v2 = m.add_vertex(0, 1, 0);
+    auto v3 = m.add_vertex(0, 0, 1);
+    auto v4 = m.add_vertex(0, 0, 1);
+    m.add_cell(v0, v1, v2, v3);
+    m.add_cell(v0, v2, v1, v4);
+    EXPECT_NEAR(m.compute_unsigned_volume(), 2.0 / 6.0, epsilon);
 }
 
 
@@ -910,7 +933,7 @@ TEST(TetMeshTest, VertexAccessorInvalidHandleAsserts) {
 
 TEST(TetMeshTest, CellAccessorInvalidHandleAsserts) {
     TetMesh m;
-    EXPECT_DEATH(m.cell(CellHandle(0)), "");
+    EXPECT_DEATH(m.get_cell_vertices(CellHandle(0)), "");
 }
 #endif
 
@@ -983,11 +1006,103 @@ TEST(VoxelGridMeshGenTest, KnottedHoleExport) {
 
 
 TEST(ParametricMeshGenTest, MinimalNonStarShaped) {
-    auto mesh = ParametricMeshGen::generate_minimal_non_star_shaped_mesh();
+    auto codomain_mesh = ParametricMeshGen::generate_minimal_non_star_shaped_mesh();
 
-    EXPECT_EQ(mesh.n_vertices(),9);
-    EXPECT_EQ(mesh.n_cells(), 12);
-    EXPECT_NEAR(mesh.compute_total_volume(), 16.0/3.0, epsilon);
-    mesh.write_to_file("min_non_star_shaped.ovm");
+    EXPECT_EQ(codomain_mesh.n_vertices(),9);
+    EXPECT_EQ(codomain_mesh.n_cells(), 12);
+    EXPECT_NEAR(codomain_mesh.compute_signed_volume(), 16.0/3.0, epsilon);
+
+    auto domain_mesh = ParametricMeshGen::generate_minimal_non_star_shaped_domain_mesh();
+
+    EXPECT_EQ(domain_mesh.n_vertices(),9);
+    EXPECT_EQ(domain_mesh.n_cells(), 12);
+    EXPECT_NEAR(domain_mesh.compute_signed_volume(), 32.0/3.0, epsilon);
+
+    codomain_mesh.write_to_file("min_non_star_shaped_codomain.ovm");
+    domain_mesh.write_to_file("min_non_star_shaped_domain.ovm");
 }
+
+TEST(ParametricMeshGenTest, RodMesh) {
+
+    const int N(10);
+    for (int i(1); i<=N; i++) {
+        auto rod = ParametricMeshGen::generate_rod_mesh(N);
+
+        //4 vertices per "ring", N+1 rings, then the interior vertex
+        EXPECT_EQ(rod.n_vertices(), (N+1)*4 + 1);
+
+        //2 * 4 faces per "ring", then the 2 * 2 faces at the tips
+        EXPECT_EQ(rod.n_cells(),2 * (4 * N + 2));
+
+        EXPECT_NEAR(rod.compute_signed_volume(), N, epsilon);
+
+        //interior vertex is the first one, and in the middle of the mesh
+        auto interior_v_pos = rod.vertex(VertexHandle(0));
+        EXPECT_EQ(interior_v_pos, Vec3d(0.0, 0.0, 0.5 * N));
+
+        //the first vertex (after the interior one) is on the x=0 plane
+        auto first_v_pos = rod.vertex(VertexHandle(1));
+        EXPECT_EQ(first_v_pos, Vec3d(-0.5, -0.5, 0.0));
+
+        //the last vertex is on the x=N plane
+        auto last_v_pos = rod.vertex(VertexHandle(rod.n_vertices()-1));
+        EXPECT_EQ(last_v_pos, Vec3d(-0.5,0.5, N));
+    }
+}
+
+TEST(ParametricMeshGenTest, RodMeshAxialScaling) {
+
+    const int N(10);
+
+    const double max_scaling(100.0);
+    for (double s(0); s<max_scaling; s++) {
+        auto rod = ParametricMeshGen::generate_rod_mesh(N, s);
+
+        EXPECT_NEAR(rod.compute_signed_volume(), N * s, epsilon);
+
+        //interior vertex is the first one, and in the middle of the mesh
+        auto interior_v_pos = rod.vertex(VertexHandle(0));
+        EXPECT_EQ(interior_v_pos, Vec3d(0.0, 0.0, 0.5 * N * s));
+
+        //the last vertex is on the x=N plane
+        auto last_v_pos = rod.vertex(VertexHandle(rod.n_vertices()-1));
+        EXPECT_EQ(last_v_pos, Vec3d(-0.5,0.5, N * s));
+    }
+}
+
+
+TEST(ParametricMeshGenTest, RodMeshTorsion) {
+
+    const int N(10);
+
+    const double max_torsion_deg(720.0);
+    const int max_steps(10);
+
+    for (int i(1); i<=N; i++) {
+        for (int j(0); j<=max_steps; j++) {
+
+            double t_deg = j * (max_torsion_deg / max_steps);
+            double t_rad = M_PI * t_deg / 180.0;
+
+            //std::cout<<" ------------------------ t = "<<t_deg<<" / "<<t_rad<<std::endl;
+            auto rod = ParametricMeshGen::generate_rod_mesh(N, 1.0, t_rad);
+
+            //EXPECT_NEAR(rod.compute_signed_volume(), N, epsilon);
+
+            //interior vertex is the first one, and in the middle of the mesh
+            auto interior_v_pos = rod.vertex(VertexHandle(0));
+            EXPECT_EQ(interior_v_pos, Vec3d(0.0, 0.0, 0.5 * N));
+
+            //the last vertex is on the x=N plane
+            auto last_v_pos = rod.vertex(VertexHandle(rod.n_vertices()-1));
+            auto expected_last_v_pos = Vec3d(-0.5,0.5, N).rotate({0.0, 0.0, 1.0}, t_rad);
+
+            EXPECT_EQ(last_v_pos, expected_last_v_pos);
+
+            rod.write_to_file("torsion_rod.ovm");
+        }
+    }
+}
+
+
 

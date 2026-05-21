@@ -29,6 +29,31 @@ private:
     const int idx_;
 };
 
+
+    // =============================================================================
+    // Ranges
+    // =============================================================================
+
+    template <typename Handle>
+class HandleRange {
+    public:
+        struct Iterator {
+            int idx;
+            Handle operator*()        const { return Handle(idx); }
+            Iterator& operator++()          { ++idx; return *this; }
+            bool operator!=(const Iterator& rhs) const { return idx != rhs.idx; }
+        };
+
+        explicit HandleRange(int n) : n_(n) {}
+        Iterator begin() const { return {0};     }
+        Iterator end()   const { return {n_};    }
+        int      size()  const { return n_;      }
+        bool     empty() const { return n_ == 0; }
+    private:
+        int n_;
+    };
+
+
 // =============================================================================
 // TetMesh
 // =============================================================================
@@ -81,7 +106,7 @@ public:
         return vertices_[vh.idx()];
     }
 
-    const Cell& cell(CellHandle ch) const {
+    const Cell& get_cell_vertices(CellHandle ch) const {
         assert(is_valid_cell(ch) && "cell: invalid handle");
         return cells_[ch.idx()];
     }
@@ -90,11 +115,9 @@ public:
     int n_cells()    const { return static_cast<int>(cells_.size());    }
 
 
-    /// Range over all vertex positions: for (const Vec3d& v : mesh.vertices())
-    const std::vector<Vec3d>& vertices() const { return vertices_; }
-
-    /// Range over all cells: for (const Cell& c : mesh.cells())
-    const std::vector<Cell>& cells() const { return cells_; }
+    /// Range over all vertices or cells
+    auto vertices() const { return HandleRange<VertexHandle>(n_vertices()); }
+    auto cells()    const { return HandleRange<CellHandle>(n_cells());      }
 
     /// Overwrite the position of an existing vertex.
     void set_vertex(VertexHandle vh, Vec3d pos) {
@@ -110,7 +133,7 @@ public:
     /// where e1, e2, e3 are the edge vectors from the first vertex.
     /// Returns a positive value for a right-hand-rule oriented cell.
     double volume(CellHandle ch) const {
-        const Cell& c  = cell(ch);
+        const Cell& c  = get_cell_vertices(ch);
         const Vec3d& v0 = vertices_[c[0].idx()];
         const Vec3d  e1 = vertices_[c[1].idx()] - v0;
         const Vec3d  e2 = vertices_[c[2].idx()] - v0;
@@ -120,12 +143,20 @@ public:
     }
 
     /// Sum of volumes of all cells.
-    double compute_total_volume() const {
+    double compute_signed_volume() const {
         double total = 0.0;
         for (int i = 0; i < n_cells(); ++i)
             total += volume(CellHandle(i));
         return total;
     }
+
+    double compute_unsigned_volume() const {
+        double total = 0.0;
+        for (int i = 0; i < n_cells(); ++i)
+            total += std::abs(volume(CellHandle(i)));
+        return total;
+    }
+
 
     // -------------------------------------------------------------------------
     // File I/O — format detected from path extension
