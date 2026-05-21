@@ -58,14 +58,18 @@ public:
 
     /// Append a tetrahedral cell defined by four vertex handles and return its handle.
     /// The handles must refer to vertices already added to this mesh.
+    CellHandle add_cell(const std::array<VertexHandle,4>& verts) {
+        assert(is_valid_vertex(verts[0]) && "add_cell: invalid vertex handle v0");
+        assert(is_valid_vertex(verts[1]) && "add_cell: invalid vertex handle v1");
+        assert(is_valid_vertex(verts[2]) && "add_cell: invalid vertex handle v2");
+        assert(is_valid_vertex(verts[3]) && "add_cell: invalid vertex handle v3");
+        cells_.push_back(verts);
+        return CellHandle(static_cast<int>(cells_.size()) - 1);
+    }
+
     CellHandle add_cell(VertexHandle v0, VertexHandle v1,
                         VertexHandle v2, VertexHandle v3) {
-        assert(is_valid_vertex(v0) && "add_cell: invalid vertex handle v0");
-        assert(is_valid_vertex(v1) && "add_cell: invalid vertex handle v1");
-        assert(is_valid_vertex(v2) && "add_cell: invalid vertex handle v2");
-        assert(is_valid_vertex(v3) && "add_cell: invalid vertex handle v3");
-        cells_.push_back({v0, v1, v2, v3});
-        return CellHandle(static_cast<int>(cells_.size()) - 1);
+        return add_cell({v0, v1, v2, v3});
     }
 
     // -------------------------------------------------------------------------
@@ -91,6 +95,12 @@ public:
 
     /// Range over all cells: for (const Cell& c : mesh.cells())
     const std::vector<Cell>& cells() const { return cells_; }
+
+    /// Overwrite the position of an existing vertex.
+    void set_vertex(VertexHandle vh, Vec3d pos) {
+        assert(is_valid_vertex(vh) && "set_vertex: invalid handle");
+        vertices_[vh.idx()] = pos;
+    }
 
     // -------------------------------------------------------------------------
     // Geometry

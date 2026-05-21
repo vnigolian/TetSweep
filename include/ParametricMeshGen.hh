@@ -7,10 +7,9 @@ namespace tet_weave {
 
     namespace ParametricMeshGen {
 
-#if 0
-        void generate_minimal_non_star_shaped_mesh(TetMesh& ref_mesh,
-                                                   TetMesh& mesh){
+        TetMesh generate_minimal_non_star_shaped_mesh(){
 
+            TetMesh mesh;
 
             //auto v0 = mesh.add_vertex({0,0,  0});
             auto vb = mesh.add_vertex({0,0,-1}); //here so it's still v0
@@ -20,28 +19,36 @@ namespace tet_weave {
             auto v4 = mesh.add_vertex({2,1,  0});
             auto v5 = mesh.add_vertex({1,-3, 0});
             auto v6 = mesh.add_vertex({1,-1, 0});
-
             auto vt = mesh.add_vertex({0,0, 1});
+            auto vi = mesh.add_vertex({0,0,0});
 
-            mesh.add_cell({ v2, v1,vb, vt});
-            mesh.add_cell({v3, v2, vb, vt});
-            mesh.add_cell({v4, v3, vb, vt});
-            mesh.add_cell({v5, v4, vb, vt});
-            mesh.add_cell({v6, v5, vb, vt});
-            mesh.add_cell({v1, v6, vb, vt});
+            mesh.add_cell({ v2, v1,vb, vi});
+            mesh.add_cell({v3, v2, vb, vi});
+            mesh.add_cell({v4, v3, vb, vi});
+            mesh.add_cell({v5, v4, vb, vi});
+            mesh.add_cell({v6, v5, vb, vi});
+            mesh.add_cell({v1, v6, vb, vi});
 
-            mesh.split_edge(mesh.edge_handle(mesh.find_halfedge(vb, vt)));
-            mesh.collect_garbage();
+            mesh.add_cell({ v1, v2,vt, vi});
+            mesh.add_cell({v2, v3, vt, vi});
+            mesh.add_cell({v3, v4, vt, vi});
+            mesh.add_cell({v4, v5, vt, vi});
+            mesh.add_cell({v5, v6, vt, vi});
+            mesh.add_cell({v6, v1, vt, vi});
 
-            ref_mesh = mesh;
+            //mesh.split_edge(mesh.edge_handle(mesh.find_halfedge(vb, vt)));
+
+            /*ref_mesh = mesh;
             //ref_mesh.set_vertex(VertexHandle(0), {0, 0.5,0});
             ref_mesh.set_vertex(v1, {-1, -3,0});
             ref_mesh.set_vertex(v2, {-2, -3,0});
             ref_mesh.set_vertex(v5, {2, -3, 0});
-            ref_mesh.set_vertex(v6, {1, -3, 0});
+            ref_mesh.set_vertex(v6, {1, -3, 0});*/
+            return mesh;
         }
 
 
+#if 0
         void generate_rod_mesh(TetMesh &mesh,
                                int length,
                                double axial_scaling,

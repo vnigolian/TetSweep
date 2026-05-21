@@ -518,6 +518,26 @@ TEST(TetMeshTest, MultipleVerticesStoredIndependently) {
     EXPECT_DOUBLE_EQ(m.vertex(v1).y(), 2.0);
 }
 
+TEST(TetMeshTest, SetVertexVec3d) {
+    TetMesh m;
+    auto vh = m.add_vertex(0, 0, 0);
+    m.set_vertex(vh, {1, 2, 3});
+    EXPECT_DOUBLE_EQ(m.vertex(vh).x(), 1.0);
+    EXPECT_DOUBLE_EQ(m.vertex(vh).y(), 2.0);
+    EXPECT_DOUBLE_EQ(m.vertex(vh).z(), 3.0);
+}
+
+
+TEST(TetMeshTest, SetVertexDoesNotAffectOthers) {
+    TetMesh m;
+    auto v0 = m.add_vertex(1, 0, 0);
+    auto v1 = m.add_vertex(0, 1, 0);
+    m.set_vertex(v0, {9, 9, 9});
+    EXPECT_DOUBLE_EQ(m.vertex(v1).x(), 0.0);
+    EXPECT_DOUBLE_EQ(m.vertex(v1).y(), 1.0);
+    EXPECT_DOUBLE_EQ(m.vertex(v1).z(), 0.0);
+}
+
 // =============================================================================
 // Cells
 // =============================================================================
@@ -534,6 +554,17 @@ TEST(TetMeshTest, AddCellHandleIndex) {
     auto v1 = m.add_vertex(3, 0, 0);
     auto v2 = m.add_vertex(4, 0, 0);
     auto v3 = m.add_vertex(5, 0, 0);
+    auto ch = m.add_cell({v0, v1, v2, v3});
+    EXPECT_EQ(ch.idx(), 1);
+}
+
+TEST(TetMeshTest, AddCellHandleIndexWithFourArguments) {
+    TetMesh m = make_single_tet();
+    // First cell should have index 0
+    auto v0 = m.add_vertex(2, 0, 0);
+    auto v1 = m.add_vertex(3, 0, 0);
+    auto v2 = m.add_vertex(4, 0, 0);
+    auto v3 = m.add_vertex(5, 0, 0);
     auto ch = m.add_cell(v0, v1, v2, v3);
     EXPECT_EQ(ch.idx(), 1);
 }
@@ -544,7 +575,7 @@ TEST(TetMeshTest, CellVertexHandlesRoundtrip) {
     auto v1 = m.add_vertex(1, 0, 0);
     auto v2 = m.add_vertex(0, 1, 0);
     auto v3 = m.add_vertex(0, 0, 1);
-    auto ch = m.add_cell(v0, v1, v2, v3);
+    auto ch = m.add_cell({v0, v1, v2, v3});
 
     const auto& c = m.cell(ch);
     EXPECT_EQ(c[0], v0);
@@ -561,8 +592,8 @@ TEST(TetMeshTest, MultipleCells) {
     auto v3 = m.add_vertex(0, 0, 1);
     auto v4 = m.add_vertex(1, 1, 1);
 
-    m.add_cell(v0, v1, v2, v3);
-    m.add_cell(v1, v2, v3, v4);
+    m.add_cell({v0, v1, v2, v3});
+    m.add_cell({v1, v2, v3, v4});
     EXPECT_EQ(m.n_cells(), 2);
 }
 
@@ -669,6 +700,18 @@ TEST(TetMeshTest, TotalVolumeEmptyMesh) {
 TEST(TetMeshTest, TotalVolumeSingleCell) {
     TetMesh m = make_single_tet();
     EXPECT_NEAR(m.compute_total_volume(), 1.0 / 6.0, epsilon);
+}
+
+TEST(TetMeshTest, TotalVolumeSingleFlippedCell) {
+    TetMesh m = make_single_tet();
+    m.set_vertex(VertexHandle(3), {0,0,-1});
+    EXPECT_NEAR(m.compute_total_volume(), -1.0 / 6.0, epsilon);
+}
+
+TEST(TetMeshTest, TotalVolumeSingleDegenerateCell) {
+    TetMesh m = make_single_tet();
+    m.set_vertex(VertexHandle(3), {1,1,0});
+    EXPECT_NEAR(m.compute_total_volume(), 0.0, epsilon);
 }
 
 TEST(TetMeshTest, TotalVolumeMultipleCells) {
@@ -938,8 +981,13 @@ TEST(VoxelGridMeshGenTest, KnottedHoleExport) {
 // Parametric meshes
 // =============================================================================
 
-/*
+
 TEST(ParametricMeshGenTest, MinimalNonStarShaped) {
     auto mesh = ParametricMeshGen::generate_minimal_non_star_shaped_mesh();
-}*/
+
+    EXPECT_EQ(mesh.n_vertices(),9);
+    EXPECT_EQ(mesh.n_cells(), 12);
+    EXPECT_NEAR(mesh.compute_total_volume(), 16.0/3.0, epsilon);
+    mesh.write_to_file("min_non_star_shaped.ovm");
+}
 
