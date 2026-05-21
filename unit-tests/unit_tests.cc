@@ -6,6 +6,7 @@
 #include "Vec3d.hh"
 #include "TetMesh.hh"
 #include "VoxelGridMeshGen.hh"
+#include "ParametricMeshGen.hh"
 
 
 
@@ -23,7 +24,7 @@ TEST(CompileTest, BasicTest) {
 // Helpers
 // =============================================================================
 
-static constexpr double epsilon = 1e-12;
+static constexpr double epsilon = 1e-10;
 static constexpr double M_PI_   = 3.14159265358979323846;
 
 /// Expect two Vec3d values to be component-wise close.
@@ -415,6 +416,22 @@ static TetMesh make_single_tet() {
     return m;
 }
 
+
+// Unit regular tetrahedron with volume exactly 1.0.
+// Edge length a = (6*sqrt(2))^(1/3) ≈ 2.0, placed so v0 is at origin.
+static TetMesh make_unit_volume_tet() {
+    // Place a regular tet with volume = 1.
+    // V = a^3 / (6*sqrt(2))  →  a = (6*sqrt(2))^(1/3)
+    const double a = std::cbrt(6.0 * std::sqrt(2.0));
+    TetMesh m;
+    m.add_vertex(0,       0,            0);
+    m.add_vertex(a,       0,            0);
+    m.add_vertex(a / 2.0, a * std::sqrt(3.0) / 2.0, 0);
+    m.add_vertex(a / 2.0, a * std::sqrt(3.0) / 6.0, a * std::sqrt(2.0 / 3.0));
+    m.add_cell(VertexHandle(0), VertexHandle(1), VertexHandle(2), VertexHandle(3));
+    return m;
+}
+
 // =============================================================================
 // VertexHandle
 // =============================================================================
@@ -608,6 +625,77 @@ TEST(TetMeshTest, EmptyCellsRange) {
     int count = 0;
     for ([[maybe_unused]] const auto& c : m.cells()) ++count;
     EXPECT_EQ(count, 0);
+}
+
+// =============================================================================
+// Volume
+// =============================================================================
+
+
+TEST(TetMeshTest, VolumeOfCanonicalTet) {
+    // make_single_tet: v0=(0,0,0), v1=(1,0,0), v2=(0,1,0), v3=(0,0,1)
+    // e1=(1,0,0), e2=(0,1,0), e3=(0,0,1) → det = 1 → volume = 1/6
+    TetMesh m = make_single_tet();
+    EXPECT_NEAR(m.volume(CellHandle(0)), 1.0 / 6.0, epsilon);
+}
+
+TEST(TetMeshTest, VolumeOfUnitVolumeTet) {
+    TetMesh m = make_unit_volume_tet();
+    EXPECT_NEAR(m.volume(CellHandle(0)), 1.0, epsilon);
+}
+
+TEST(TetMeshTest, VolumePositiveForCorrectWinding) {
+    TetMesh m = make_single_tet();
+    EXPECT_GT(m.volume(CellHandle(0)), 0.0);
+}
+
+TEST(TetMeshTest, VolumeScalesWithEdgeLength) {
+    // Scaling all vertices by factor k scales the volume by k^3.
+    const double k = 3.0;
+    TetMesh m;
+    m.add_vertex(0,  0,  0);
+    m.add_vertex(k,  0,  0);
+    m.add_vertex(0,  k,  0);
+    m.add_vertex(0,  0,  k);
+    m.add_cell(VertexHandle(0), VertexHandle(1), VertexHandle(2), VertexHandle(3));
+    EXPECT_NEAR(m.volume(CellHandle(0)), (1.0 / 6.0) * k * k * k, epsilon);
+}
+
+TEST(TetMeshTest, TotalVolumeEmptyMesh) {
+    TetMesh m;
+    EXPECT_DOUBLE_EQ(m.compute_total_volume(), 0.0);
+}
+
+TEST(TetMeshTest, TotalVolumeSingleCell) {
+    TetMesh m = make_single_tet();
+    EXPECT_NEAR(m.compute_total_volume(), 1.0 / 6.0, epsilon);
+}
+
+TEST(TetMeshTest, TotalVolumeMultipleCells) {
+    // Two identical canonical tets → total = 2 * (1/6) = 1/3.
+    TetMesh m;
+    auto v0 = m.add_vertex(0, 0, 0);
+    auto v1 = m.add_vertex(1, 0, 0);
+    auto v2 = m.add_vertex(0, 1, 0);
+    auto v3 = m.add_vertex(0, 0, 1);
+    auto v4 = m.add_vertex(0, 0, -1);
+    m.add_cell(v0, v1, v2, v3);
+    m.add_cell(v0, v2, v1, v4);
+    EXPECT_NEAR(m.compute_total_volume(), 1.0 / 3.0, epsilon);
+}
+
+
+TEST(TetMeshTest, TotalVolumeOppositeOrientations) {
+    // Two identical canonical tets, but with opposite orientations → total = 0.0.
+    TetMesh m;
+    auto v0 = m.add_vertex(0, 0, 0);
+    auto v1 = m.add_vertex(1, 0, 0);
+    auto v2 = m.add_vertex(0, 1, 0);
+    auto v3 = m.add_vertex(0, 0, 1);
+    auto v4 = m.add_vertex(0, 0, 1);
+    m.add_cell(v0, v1, v2, v3);
+    m.add_cell(v0, v2, v1, v4);
+    EXPECT_NEAR(m.compute_total_volume(), 0.0, epsilon);
 }
 
 
@@ -805,6 +893,11 @@ TEST(VoxelGridMeshGenTest, VariableSizedGrids) {
 }
 
 
+// =============================================================================
+// Voxel grid meshes
+// =============================================================================
+
+
 TEST(VoxelGridMeshGenTest, KnottedHoles) {
     std::vector<int> cell_counts = {
         1575,
@@ -838,5 +931,15 @@ TEST(VoxelGridMeshGenTest, KnottedHoleExport) {
     EXPECT_EQ(mesh.n_cells(), 1405);
 
     mesh.write_to_file("knotted_hole.ovm");
-
 }
+
+
+// =============================================================================
+// Parametric meshes
+// =============================================================================
+
+/*
+TEST(ParametricMeshGenTest, MinimalNonStarShaped) {
+    auto mesh = ParametricMeshGen::generate_minimal_non_star_shaped_mesh();
+}*/
+

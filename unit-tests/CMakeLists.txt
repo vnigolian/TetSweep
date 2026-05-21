@@ -29,9 +29,9 @@ endif()
 
 enable_testing()
 
+include_directories(../include)
 add_executable(unit_tests unit_tests.cc)
 target_link_libraries(unit_tests
-        TetWeave
         GTest::gtest_main
 )
 

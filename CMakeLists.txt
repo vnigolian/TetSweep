@@ -22,27 +22,19 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++17")
 #NOTE: if you get CHOLMOD issues again, do this:
 # export OpenMP_ROOT=$(brew --prefix)/opt/libomp
 
-if(NOT TARGET argparse)
-    FetchContent_Declare(argparse
-            GIT_REPOSITORY  https://github.com/p-ranav/argparse.git
-            SOURCE_DIR "${EXTERNAL_DIR}/argparse"
-    )
-    FetchContent_MakeAvailable(argparse)
-endif()
-
 
 
 FILE(GLOB SOURCE_FILES
-        src/*.cc
+        include/*.cc
         )
 
-include_directories(src/)
+include_directories(include/)
 
 
-add_library (TetWeave ${SOURCE_FILES})
-target_link_libraries (TetWeave PUBLIC
-        argparse
-)
+#add_library (TetWeave ${SOURCE_FILES})
+#target_link_libraries (TetWeave PUBLIC
+#        argparse
+#)
 
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

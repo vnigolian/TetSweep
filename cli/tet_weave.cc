@@ -1,6 +1,8 @@
 
-#include "VoxelGridMeshGen.hh"
+#include <argparse/argparse.hpp>
 
+#include "VoxelGridMeshGen.hh"
+#include "ParametricMeshGen.hh"
 
 int parse_args(int argc, char** argv, argparse::ArgumentParser& parser);
 

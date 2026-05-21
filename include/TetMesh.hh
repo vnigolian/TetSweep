@@ -93,6 +93,31 @@ public:
     const std::vector<Cell>& cells() const { return cells_; }
 
     // -------------------------------------------------------------------------
+    // Geometry
+    // -------------------------------------------------------------------------
+
+    /// Volume of a single tet, computed as det(e1, e2, e3) / 6
+    /// where e1, e2, e3 are the edge vectors from the first vertex.
+    /// Returns a positive value for a right-hand-rule oriented cell.
+    double volume(CellHandle ch) const {
+        const Cell& c  = cell(ch);
+        const Vec3d& v0 = vertices_[c[0].idx()];
+        const Vec3d  e1 = vertices_[c[1].idx()] - v0;
+        const Vec3d  e2 = vertices_[c[2].idx()] - v0;
+        const Vec3d  e3 = vertices_[c[3].idx()] - v0;
+        // det(e1, e2, e3) = e1 · (e2 × e3)
+        return e1.dot(e2.cross(e3)) / 6.0;
+    }
+
+    /// Sum of volumes of all cells.
+    double compute_total_volume() const {
+        double total = 0.0;
+        for (int i = 0; i < n_cells(); ++i)
+            total += volume(CellHandle(i));
+        return total;
+    }
+
+    // -------------------------------------------------------------------------
     // File I/O — format detected from path extension
     // -------------------------------------------------------------------------
 
