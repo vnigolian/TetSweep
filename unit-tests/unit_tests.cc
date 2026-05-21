@@ -549,6 +549,68 @@ TEST(TetMeshTest, MultipleCells) {
     EXPECT_EQ(m.n_cells(), 2);
 }
 
+
+// =============================================================================
+// Iterators
+// =============================================================================
+
+TEST(TetMeshTest, VerticesRangeCount) {
+    TetMesh m = make_single_tet();
+    int count = 0;
+    for ([[maybe_unused]] const auto& v : m.vertices()) ++count;
+    EXPECT_EQ(count, 4);
+}
+
+TEST(TetMeshTest, VerticesRangeValues) {
+    TetMesh m;
+    m.add_vertex(1, 2, 3);
+    m.add_vertex(4, 5, 6);
+    int i = 0;
+    for (const auto& v : m.vertices()) {
+        EXPECT_DOUBLE_EQ(v.x(), m.vertex(VertexHandle(i)).x());
+        EXPECT_DOUBLE_EQ(v.y(), m.vertex(VertexHandle(i)).y());
+        EXPECT_DOUBLE_EQ(v.z(), m.vertex(VertexHandle(i)).z());
+        ++i;
+    }
+}
+
+TEST(TetMeshTest, CellsRangeCount) {
+    TetMesh m = make_single_tet();
+    int count = 0;
+    for ([[maybe_unused]] const auto& c : m.cells()) ++count;
+    EXPECT_EQ(count, 1);
+}
+
+TEST(TetMeshTest, CellsRangeValues) {
+    TetMesh m;
+    auto v0 = m.add_vertex(0, 0, 0);
+    auto v1 = m.add_vertex(1, 0, 0);
+    auto v2 = m.add_vertex(0, 1, 0);
+    auto v3 = m.add_vertex(0, 0, 1);
+    m.add_cell(v0, v1, v2, v3);
+    for (const auto& c : m.cells()) {
+        EXPECT_EQ(c[0], v0);
+        EXPECT_EQ(c[1], v1);
+        EXPECT_EQ(c[2], v2);
+        EXPECT_EQ(c[3], v3);
+    }
+}
+
+TEST(TetMeshTest, EmptyVerticesRange) {
+    TetMesh m;
+    int count = 0;
+    for ([[maybe_unused]] const auto& v : m.vertices()) ++count;
+    EXPECT_EQ(count, 0);
+}
+
+TEST(TetMeshTest, EmptyCellsRange) {
+    TetMesh m;
+    int count = 0;
+    for ([[maybe_unused]] const auto& c : m.cells()) ++count;
+    EXPECT_EQ(count, 0);
+}
+
+
 // =============================================================================
 // File I/O — .ovm
 // =============================================================================

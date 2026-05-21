@@ -85,6 +85,13 @@ public:
     int n_vertices() const { return static_cast<int>(vertices_.size()); }
     int n_cells()    const { return static_cast<int>(cells_.size());    }
 
+
+    /// Range over all vertex positions: for (const Vec3d& v : mesh.vertices())
+    const std::vector<Vec3d>& vertices() const { return vertices_; }
+
+    /// Range over all cells: for (const Cell& c : mesh.cells())
+    const std::vector<Cell>& cells() const { return cells_; }
+
     // -------------------------------------------------------------------------
     // File I/O — format detected from path extension
     // -------------------------------------------------------------------------
