@@ -3,6 +3,7 @@
 
 #include "TetMesh.hh"
 #include "ParametricFunctions.hh"
+#include "SimpleMeshGen.hh"
 
 namespace tet_weave {
 
@@ -15,7 +16,7 @@ namespace tet_weave {
 
 
         TetMesh generate_parametric_mesh(ParametricCurve curve,
-                                         std::vector<double>& curve_params,
+                                         const std::vector<double>& curve_params,
                                          double t_min,
                                          double t_max,
                                          int length,
@@ -32,6 +33,7 @@ namespace tet_weave {
                 //std::cout<<" - point "<<i<<" for t = "<<t<<" : "<<curve_pos<<std::endl;
             }
 
+            auto mesh = SimpleMeshGen::generate_rod_mesh(length);
             
             int i(0);
             for(auto v: mesh.vertices()){
@@ -60,12 +62,12 @@ namespace tet_weave {
                 auto y = pos[1];
                 auto z = pos[2];
 
-                Eigen::Vector3d curve_pos = curve_points[point_idx];
-                Eigen::Vector3d next_curve_pos = curve_points[next_point_idx];
+                Vec3d curve_pos = curve_points[point_idx];
+                Vec3d next_curve_pos = curve_points[next_point_idx];
                 //std::cout<<" - next curve point: "<<next_curve_pos<<std::endl;
 
                 //tangent
-                Eigen::Vector3d t = -(next_curve_pos - curve_pos).normalized();
+                Vec3d t = -(next_curve_pos - curve_pos).normalized();
                 if(last_point){
                     curve_pos = next_curve_pos;
                 }
@@ -73,7 +75,7 @@ namespace tet_weave {
                 //std::cout<<" - tangent: "<<t<<std::endl;
 
                 // first perpendicular vector (with projection)
-                Eigen::Vector3d t_proj = t;
+                Vec3d t_proj = t;
                 double sign = t_proj[2] == 0 ? 0 :(t_proj[2] > 0 ? 1 : -1);
                 if(sign){
                     t_proj[2] = 0;
@@ -81,28 +83,27 @@ namespace tet_weave {
                     t_proj = {0,0,1};
                     sign = 1;
                 }
-                Eigen::Vector3d tp1 = sign * t_proj.cross(t);
+                Vec3d tp1 = sign * t_proj.cross(t);
                 tp1.normalize();
                 //std::cout<<" - orthogonal axis 1: "<<tp1.transpose()<<std::endl;
 
-                Eigen::Vector3d tp2 = tp1.cross(t);
+                Vec3d tp2 = tp1.cross(t);
                 tp2.normalize();
 
                 //std::cout<<" - orthogonal axis 2: "<<tp2.transpose()<<std::endl;
                 //std::cout<<" - dot prod check 1: "<<tp1.dot(t)<<std::endl;
                 //std::cout<<" - dot prod check 2: "<<tp2.dot(t)<<std::endl;
 
-                Eigen::Vector3d new_pos = curve_pos + orthogonal_scaling * x * tp1 + orthogonal_scaling * y * tp2;
+                Vec3d new_pos = curve_pos + thickness * x * tp1 + thickness * y * tp2;
                 //std::cout<<" - new pos: "<<new_pos<<std::endl;
 
                 //std::cout<<" - v"<<v<<" at "<<pos<<" moved to "<<new_pos<<std::endl;
 
-                mesh.set_vertex(v, vec2vec(new_pos));
+                mesh.set_vertex(v, new_pos);
                 i++;
             }
-            return; //below is to debug shape
-            mesh.delete_vertex(VertexHandle(0));
-            mesh.collect_garbage();
+            
+            return mesh;
         }
     }
 }

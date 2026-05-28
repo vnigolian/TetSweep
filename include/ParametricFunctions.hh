@@ -8,8 +8,7 @@ namespace tet_weave{
     using ParametricCurve = Vec3d(*)(const std::vector<double>&, double);
 
 
-
-    Vec3d parametric_circle(const std::vector<double>& params, double t){
+    Vec3d circle(const std::vector<double>& params, double t){
         assert(params.size() == 2 && "parametric circle takes exactly 2 argument");
 
         double radius = params[0];
@@ -20,7 +19,7 @@ namespace tet_weave{
 
 
 
-    Vec3d parametric_spiral(const std::vector<double>& params, double t){
+    Vec3d multi_branch_spiral(const std::vector<double>& params, double t){
         assert(params.size() == 4 && "parametric spiral takes exactly 4 arguments");
 
         double center_radius = params[0];
@@ -45,14 +44,14 @@ namespace tet_weave{
     }
 
 
-    Vec3d parametric_trefoil_knot(const std::vector<double>& params, double t){
+    Vec3d trefoil_knot(const std::vector<double>& params, double t){
         return { std::sin(t) + 2 * std::sin(2 * t),
                     std::cos(t) - 2 * std::cos(2 * t),
                     -std::sin(3 * t)};
     }
 
 
-    Vec3d parametric_complex_spiral(const std::vector<double>& params, double t){
+    Vec3d funny_spiral(const std::vector<double>& params, double t){
         assert(params.size() == 4 && "parametric complex spiral takes exactly 4 arguments");
 
         double a       = params[0];
@@ -64,4 +63,5 @@ namespace tet_weave{
                 std::sin(a * t) + std::sin(b * t) / 2.0 + std::cos(c * t) / 3.0,
                 z_scale * t};
     }
+
 }

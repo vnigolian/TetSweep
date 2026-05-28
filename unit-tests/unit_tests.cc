@@ -8,7 +8,6 @@
 #include "VoxelGridMeshGen.hh"
 #include "SimpleMeshGen.hh"
 #include "ParametricMeshGen.hh"
-#include "ParametricFunctions.hh"
 
 
 using namespace tet_weave;
@@ -1347,29 +1346,29 @@ static double xy_norm(const Vec3d& v) {
 // -----------------------------------------------------------------------------
  
 TEST(ParametricCircleTest, AtTZeroReturnsRadiusOnXAxis) {
-    Vec3d p = parametric_circle({1.0, 0.0}, 0.0);
+    Vec3d p = circle({1.0, 0.0}, 0.0);
     EXPECT_NEAR(p.x(), 1.0, curve_epsilon);
     EXPECT_NEAR(p.y(), 0.0, curve_epsilon);
     EXPECT_NEAR(p.z(), 0.0, curve_epsilon);
 }
  
 TEST(ParametricCircleTest, AtTHalfPiReturnsRadiusOnYAxis) {
-    Vec3d p = parametric_circle({1.0, 0.0}, M_PI / 2.0);
+    Vec3d p = circle({1.0, 0.0}, M_PI / 2.0);
     EXPECT_NEAR(p.x(), 0.0, curve_epsilon);
     EXPECT_NEAR(p.y(), 1.0, curve_epsilon);
     EXPECT_NEAR(p.z(), 0.0, curve_epsilon);
 }
  
 TEST(ParametricCircleTest, AtTPiReturnsNegativeXAxis) {
-    Vec3d p = parametric_circle({1.0, 0.0}, M_PI);
+    Vec3d p = circle({1.0, 0.0}, M_PI);
     EXPECT_NEAR(p.x(), -1.0, curve_epsilon);
     EXPECT_NEAR(p.y(),  0.0, curve_epsilon);
 }
  
 TEST(ParametricCircleTest, IsClosed) {
     // Full circle: t=0 and t=2pi should give the same xy point.
-    Vec3d p0  = parametric_circle({1.0, 0.0}, 0.0);
-    Vec3d p2pi = parametric_circle({1.0, 0.0}, 2.0 * M_PI);
+    Vec3d p0  = circle({1.0, 0.0}, 0.0);
+    Vec3d p2pi = circle({1.0, 0.0}, 2.0 * M_PI);
     EXPECT_NEAR(p0.x(), p2pi.x(), curve_epsilon);
     EXPECT_NEAR(p0.y(), p2pi.y(), curve_epsilon);
 }
@@ -1378,7 +1377,7 @@ TEST(ParametricCircleTest, XYNormEqualsRadius) {
     // The xy distance from origin should always equal radius.
     const double radius = 3.0;
     for (double t : {0.0, M_PI / 4.0, M_PI / 2.0, M_PI, 3.0 * M_PI / 2.0}) {
-        Vec3d p = parametric_circle({radius, 0.0}, t);
+        Vec3d p = circle({radius, 0.0}, t);
         EXPECT_NEAR(xy_norm(p), radius, curve_epsilon) << "t=" << t;
     }
 }
@@ -1386,14 +1385,14 @@ TEST(ParametricCircleTest, XYNormEqualsRadius) {
 TEST(ParametricCircleTest, RadiusScalesOutput) {
     // Doubling the radius should double the xy distance from origin.
     double t = M_PI / 3.0;
-    Vec3d p1 = parametric_circle({1.0, 0.0}, t);
-    Vec3d p2 = parametric_circle({2.0, 0.0}, t);
+    Vec3d p1 = circle({1.0, 0.0}, t);
+    Vec3d p2 = circle({2.0, 0.0}, t);
     EXPECT_NEAR(xy_norm(p2), 2.0 * xy_norm(p1), curve_epsilon);
 }
  
 TEST(ParametricCircleTest, ZScaleZeroKeepsCurveFlat) {
     for (double t : {0.0, 1.0, 2.0, M_PI}) {
-        Vec3d p = parametric_circle({1.0, 0.0}, t);
+        Vec3d p = circle({1.0, 0.0}, t);
         EXPECT_NEAR(p.z(), 0.0, curve_epsilon) << "t=" << t;
     }
 }
@@ -1401,14 +1400,14 @@ TEST(ParametricCircleTest, ZScaleZeroKeepsCurveFlat) {
 TEST(ParametricCircleTest, ZComponentLinearInT) {
     // z = radius * z_scale * t
     const double radius = 2.0, z_scale = 3.0, t = 1.0;
-    Vec3d p = parametric_circle({radius, z_scale}, t);
+    Vec3d p = circle({radius, z_scale}, t);
     EXPECT_NEAR(p.z(), radius * z_scale * t, curve_epsilon);
 }
  
 #ifndef NDEBUG
 TEST(ParametricCircleTest, WrongParamCountAsserts) {
-    EXPECT_DEATH(parametric_circle({1.0}, 0.0), "");
-    EXPECT_DEATH(parametric_circle({1.0, 2.0, 3.0}, 0.0), "");
+    EXPECT_DEATH(circle({1.0}, 0.0), "");
+    EXPECT_DEATH(circle({1.0, 2.0, 3.0}, 0.0), "");
 }
 #endif
  
@@ -1419,7 +1418,7 @@ TEST(ParametricCircleTest, WrongParamCountAsserts) {
 TEST(ParametricSpiralTest, ZeroZScaleKeepsCurveFlat) {
     // z_scale=0 → z component should always be 0.
     for (double t : {0.0, 1.0, M_PI, 2.0 * M_PI}) {
-        Vec3d p = parametric_spiral({0.0, 1, 1.0, 0.0}, t);
+        Vec3d p = multi_branch_spiral({0.0, 1, 1.0, 0.0}, t);
         EXPECT_NEAR(p.z(), 0.0, curve_epsilon) << "t=" << t;
     }
 }
@@ -1428,7 +1427,7 @@ TEST(ParametricSpiralTest, ZeroBranchLengthNoRotation) {
     // branch_length=0 → angle=0 → rotate by 0 → p = (cos(t), sin(t), z_scale*t).
     const double z_scale = 1.0;
     for (double t : {0.0, M_PI / 4.0, M_PI / 2.0, M_PI}) {
-        Vec3d p        = parametric_spiral({0.0, 1, 0.0, z_scale}, t);
+        Vec3d p        = multi_branch_spiral({0.0, 1, 0.0, z_scale}, t);
         Vec3d expected = {std::cos(t), std::sin(t), z_scale * t};
         EXPECT_NEAR(p.x(), expected.x(), curve_epsilon) << "t=" << t;
         EXPECT_NEAR(p.y(), expected.y(), curve_epsilon) << "t=" << t;
@@ -1440,7 +1439,7 @@ TEST(ParametricSpiralTest, OutputIsUnitNormInXY) {
     // The base vector before rotation is always on the unit circle,
     // and rotation preserves norm → xy norm should always be 1.
     for (double t : {0.0, 0.5, 1.0, M_PI}) {
-        Vec3d p = parametric_spiral({1.0, 2, 0.5, 0.0}, t);
+        Vec3d p = multi_branch_spiral({1.0, 2, 0.5, 0.0}, t);
         EXPECT_NEAR(xy_norm(p), 1.0, curve_epsilon) << "t=" << t;
     }
 }
@@ -1449,14 +1448,14 @@ TEST(ParametricSpiralTest, ZComponentLinearInT) {
     // z = z_scale * t (unaffected by rotation around z-axis).
     const double z_scale = 2.0;
     for (double t : {0.0, 1.0, 2.0, M_PI}) {
-        Vec3d p = parametric_spiral({1.0, 1, 1.0, z_scale}, t);
+        Vec3d p = multi_branch_spiral({1.0, 1, 1.0, z_scale}, t);
         EXPECT_NEAR(p.z(), z_scale * t, curve_epsilon) << "t=" << t;
     }
 }
  
 #ifndef NDEBUG
 TEST(ParametricSpiralTest, WrongParamCountAsserts) {
-    EXPECT_DEATH(parametric_spiral({1.0, 2.0}, 0.0), "");
+    EXPECT_DEATH(multi_branch_spiral({1.0, 2.0}, 0.0), "");
 }
 #endif
  
@@ -1466,7 +1465,7 @@ TEST(ParametricSpiralTest, WrongParamCountAsserts) {
  
 TEST(ParametricTrefoilKnotTest, AtTZero) {
     // t=0: (sin0+2sin0, cos0-2cos0, -sin0) = (0, -1, 0)
-    Vec3d p = parametric_trefoil_knot({}, 0.0);
+    Vec3d p = trefoil_knot({}, 0.0);
     EXPECT_NEAR(p.x(),  0.0, curve_epsilon);
     EXPECT_NEAR(p.y(), -1.0, curve_epsilon);
     EXPECT_NEAR(p.z(),  0.0, curve_epsilon);
@@ -1474,8 +1473,8 @@ TEST(ParametricTrefoilKnotTest, AtTZero) {
  
 TEST(ParametricTrefoilKnotTest, IsClosed) {
     // The trefoil knot is periodic with period 2pi.
-    Vec3d p0   = parametric_trefoil_knot({}, 0.0);
-    Vec3d p2pi = parametric_trefoil_knot({}, 2.0 * M_PI);
+    Vec3d p0   = trefoil_knot({}, 0.0);
+    Vec3d p2pi = trefoil_knot({}, 2.0 * M_PI);
     EXPECT_NEAR(p0.x(), p2pi.x(), curve_epsilon);
     EXPECT_NEAR(p0.y(), p2pi.y(), curve_epsilon);
     EXPECT_NEAR(p0.z(), p2pi.z(), curve_epsilon);
@@ -1485,7 +1484,7 @@ TEST(ParametricTrefoilKnotTest, ZIsAlwaysBounded) {
     // z = -sin(3t), so |z| <= 1 for all t.
     for (int i = 0; i < 100; ++i) {
         double t = 2.0 * M_PI * i / 100.0;
-        Vec3d p = parametric_trefoil_knot({}, t);
+        Vec3d p = trefoil_knot({}, t);
         EXPECT_LE(std::abs(p.z()), 1.0 + curve_epsilon) << "t=" << t;
     }
 }
@@ -1494,9 +1493,9 @@ TEST(ParametricTrefoilKnotTest, HasThreefoldSymmetry) {
     // Shifting t by 2pi/3 rotates the knot by 2pi/3 in the xy-plane.
     // The norm of the xy component should be preserved.
     for (double t : {0.0, 0.5, 1.0}) {
-        Vec3d p0 = parametric_trefoil_knot({}, t);
-        Vec3d p1 = parametric_trefoil_knot({}, t + 2.0 * M_PI / 3.0);
-        Vec3d p2 = parametric_trefoil_knot({}, t + 4.0 * M_PI / 3.0);
+        Vec3d p0 = trefoil_knot({}, t);
+        Vec3d p1 = trefoil_knot({}, t + 2.0 * M_PI / 3.0);
+        Vec3d p2 = trefoil_knot({}, t + 4.0 * M_PI / 3.0);
         EXPECT_NEAR(p0.norm(), p1.norm(), 1e-9) << "t=" << t;
         EXPECT_NEAR(p1.norm(), p2.norm(), 1e-9) << "t=" << t;
     }
@@ -1504,9 +1503,9 @@ TEST(ParametricTrefoilKnotTest, HasThreefoldSymmetry) {
  
 TEST(ParametricTrefoilKnotTest, IgnoresParams) {
     // params is unused — passing different values should give identical results.
-    Vec3d p0 = parametric_trefoil_knot({},            1.0);
-    Vec3d p1 = parametric_trefoil_knot({1.0, 2.0},    1.0);
-    Vec3d p2 = parametric_trefoil_knot({99.0, -3.14}, 1.0);
+    Vec3d p0 = trefoil_knot({},            1.0);
+    Vec3d p1 = trefoil_knot({1.0, 2.0},    1.0);
+    Vec3d p2 = trefoil_knot({99.0, -3.14}, 1.0);
     EXPECT_NEAR(p0.x(), p1.x(), curve_epsilon);
     EXPECT_NEAR(p0.x(), p2.x(), curve_epsilon);
 }
@@ -1517,7 +1516,7 @@ TEST(ParametricTrefoilKnotTest, IgnoresParams) {
  
 TEST(ParametricComplexSpiralTest, AtTZero) {
     // t=0: x = cos0 + cos0/2 + sin0/3 = 1.5, y = sin0 + sin0/2 + cos0/3 = 1/3, z = 0
-    Vec3d p = parametric_complex_spiral({1.0, 2.0, 3.0, 0.0}, 0.0);
+    Vec3d p = funny_spiral({1.0, 2.0, 3.0, 0.0}, 0.0);
     EXPECT_NEAR(p.x(), 1.5,       curve_epsilon);
     EXPECT_NEAR(p.y(), 1.0 / 3.0, curve_epsilon);
     EXPECT_NEAR(p.z(), 0.0,       curve_epsilon);
@@ -1527,14 +1526,14 @@ TEST(ParametricComplexSpiralTest, ZComponentLinearInT) {
     // z = z_scale * t, independent of a, b, c.
     const double z_scale = 2.0;
     for (double t : {0.0, 1.0, M_PI}) {
-        Vec3d p = parametric_complex_spiral({1.0, 2.0, 3.0, z_scale}, t);
+        Vec3d p = funny_spiral({1.0, 2.0, 3.0, z_scale}, t);
         EXPECT_NEAR(p.z(), z_scale * t, curve_epsilon) << "t=" << t;
     }
 }
  
 TEST(ParametricComplexSpiralTest, ZeroZScaleKeepsCurveFlat) {
     for (double t : {0.0, 1.0, M_PI, 2.0 * M_PI}) {
-        Vec3d p = parametric_complex_spiral({1.0, 2.0, 3.0, 0.0}, t);
+        Vec3d p = funny_spiral({1.0, 2.0, 3.0, 0.0}, t);
         EXPECT_NEAR(p.z(), 0.0, curve_epsilon) << "t=" << t;
     }
 }
@@ -1542,8 +1541,8 @@ TEST(ParametricComplexSpiralTest, ZeroZScaleKeepsCurveFlat) {
 TEST(ParametricComplexSpiralTest, DifferentABCGiveDifferentCurves) {
     // Changing a, b, c should change the curve shape.
     double t = 1.0;
-    Vec3d p1 = parametric_complex_spiral({1.0, 2.0, 3.0, 0.0}, t);
-    Vec3d p2 = parametric_complex_spiral({2.0, 3.0, 4.0, 0.0}, t);
+    Vec3d p1 = funny_spiral({1.0, 2.0, 3.0, 0.0}, t);
+    Vec3d p2 = funny_spiral({2.0, 3.0, 4.0, 0.0}, t);
     EXPECT_NE(p1, p2);
 }
  
@@ -1551,15 +1550,15 @@ TEST(ParametricComplexSpiralTest, SymmetricABCWithZeroZScale) {
     // With a=1, b=1, c=1: x=cos(t)+cos(t)/2+sin(t)/3, y=sin(t)+sin(t)/2+cos(t)/3
     // At t=0: x=1.5, y=1/3. At t=pi/2: x=sin(pi/2)/3=1/3, y=1.5
     // → x(0)==y(pi/2) and y(0)==x(pi/2): quarter-turn symmetry
-    Vec3d p0    = parametric_complex_spiral({1.0, 1.0, 1.0, 0.0}, 0.0);
-    Vec3d pHalf = parametric_complex_spiral({1.0, 1.0, 1.0, 0.0}, M_PI / 2.0);
+    Vec3d p0    = funny_spiral({1.0, 1.0, 1.0, 0.0}, 0.0);
+    Vec3d pHalf = funny_spiral({1.0, 1.0, 1.0, 0.0}, M_PI / 2.0);
     EXPECT_NEAR(p0.x(), pHalf.y(), curve_epsilon);
     EXPECT_NEAR(p0.y(), pHalf.x(), curve_epsilon);
 }
  
 #ifndef NDEBUG
 TEST(ParametricComplexSpiralTest, WrongParamCountAsserts) {
-    EXPECT_DEATH(parametric_complex_spiral({1.0, 2.0}, 0.0), "");
+    EXPECT_DEATH(funny_spiral({1.0, 2.0}, 0.0), "");
 }
 #endif
 
@@ -1569,7 +1568,23 @@ TEST(ParametricComplexSpiralTest, WrongParamCountAsserts) {
 // ParametricMeshGen tests
 // =============================================================================
   
-TEST(ParametricMeshGenTest, CircleParametricMesh) {
+TEST(ParametricMeshGenTest, ParametricMeshesExport) {
+
+    auto circle_mesh = ParametricMeshGen::generate_parametric_mesh(circle, {2.0},
+                                                              0.25, 1.0, //t range 
+                                                              40, 0.5); //length, thickness
+    circle_mesh.write_to_file("circle.ovm");
+
+    auto multi_branch_spiral_mesh = ParametricMeshGen::generate_parametric_mesh(multi_branch_spiral, {1.0, 3, 3.0, 0.0},
+                                                                                  0.0, 0.2, 
+                                                                                  200, 0.1);
+    multi_branch_spiral_mesh.write_to_file("multi_branch_spiral.ovm");
+
+
+    auto funny_spiral_mesh = ParametricMeshGen::generate_parametric_mesh(funny_spiral, {0.9, 0.7, 10.0, 1.0},
+                                                                                  0.0, 2.0, 
+                                                                                  200, 0.2);
+    funny_spiral_mesh.write_to_file("funny_spiral.ovm");
 
 
 }
