@@ -1108,35 +1108,26 @@ TEST(SimpleMeshGenTest, RodMeshTorsion) {
 
 
 TEST(SimpleMeshGenTest, SineMesh) {
-
-    const int N(20);
-    auto sine = SimpleMeshGen::generate_sine_mesh(N, 0.0, 2.0, 1.0, 1.0, 1.0);
-    //std::cout<<" ------------------------ t = "<<t_deg<<" / "<<t_rad<<std::endl;
-
+    const int N(100);
+    //default mesh follows sin(x/N);
+    SimpleMeshGen::generate_sine_mesh(N);
+    auto sine = SimpleMeshGen::generate_sine_mesh(N, 5.0/N, M_PI/2.0, 2.0, 2.0);
     sine.write_to_file("sine.ovm");
-
 }
 
 
 TEST(SimpleMeshGenTest, SpiralMesh) {
-
     const int N(100);
-
     auto spiral = SimpleMeshGen::generate_spiral_mesh(N, 2*M_PI, 10.0, 5.0);
-    //std::cout<<" ------------------------ t = "<<t_deg<<" / "<<t_rad<<std::endl;
-
     spiral.write_to_file("spiral.ovm");
 
 }
 
 
 TEST(SimpleMeshGenTest, TrefoilKnotMesh) {
-
     const int N(100);
-
     auto trefoil = SimpleMeshGen::generate_trefoil_knot_mesh(N, 4*M_PI, 0.9);
     //std::cout<<" ------------------------ t = "<<t_deg<<" / "<<t_rad<<std::endl;
-
     trefoil.write_to_file("trefoil.ovm");
 }
 
@@ -1227,12 +1218,15 @@ TEST(SimpleMeshGenTest, RodMeshInteriorVertexUnaffectedByTorsion) {
 // Sine mesh
 // -----------------------------------------------------------------------------
  
-TEST(SimpleMeshGenTest, SineMeshTopology) {
-    const int N = 20;
-    auto sine = SimpleMeshGen::generate_sine_mesh(N, 0.0, 2.0, 1.0, 1.0, 1.0);
-    EXPECT_EQ(sine.n_vertices(), expected_n_vertices(N));
-    EXPECT_EQ(sine.n_cells(),    expected_n_cells(N));
+ 
+TEST(SimpleMeshGenTest, SineMeshTopologyScalesWithLength) {
+    for (int N : {10, 20, 50}) {
+        auto sine = SimpleMeshGen::generate_sine_mesh(N);
+        EXPECT_EQ(sine.n_vertices(), expected_n_vertices(N)) << "N=" << N;
+        EXPECT_EQ(sine.n_cells(),    expected_n_cells(N))    << "N=" << N;
+    }
 }
+ 
 
  
 TEST(SimpleMeshGenTest, SineMeshZeroAmplitudeMatchesRodVolume) {
@@ -1240,7 +1234,7 @@ TEST(SimpleMeshGenTest, SineMeshZeroAmplitudeMatchesRodVolume) {
     // z_scale=1 and torsion=0 → mesh is a straight rod → same volume.
     const int N = 20;
     auto rod  = SimpleMeshGen::generate_rod_mesh(N, 1.0, 0.0);
-    auto sine = SimpleMeshGen::generate_sine_mesh(N, 0.0, 0.0, 0.0, 0.0, 1.0);
+    auto sine = SimpleMeshGen::generate_sine_mesh(N, 1.0, 0.0, 1.0, 0.0);
     sine.write_to_file("sine_zero.ovm");
     EXPECT_NEAR(sine.compute_signed_volume(), rod.compute_signed_volume(), 1e-9);
 }
@@ -1248,26 +1242,18 @@ TEST(SimpleMeshGenTest, SineMeshZeroAmplitudeMatchesRodVolume) {
 TEST(SimpleMeshGenTest, SineMeshVariesWithAmplitude) {
     // Non-zero amplitude should produce a different volume than a flat rod.
     const int N = 20;
-    auto flat  = SimpleMeshGen::generate_sine_mesh(N, 0.0, 2.0, 0.0, 0.0, 1.0);
-    auto wavy  = SimpleMeshGen::generate_sine_mesh(N, 0.0, 2.0, 0.0, 2.0, 1.0);
+    auto flat  = SimpleMeshGen::generate_sine_mesh(N, 1.0, 0.0, 2.0, 0.0);
+    auto wavy  = SimpleMeshGen::generate_sine_mesh(N, 1.0, 0.0, 2.0, 2.0);
     EXPECT_NE(flat.compute_signed_volume(), wavy.compute_signed_volume());
 }
- 
-TEST(SimpleMeshGenTest, SineMeshTopologyScalesWithLength) {
-    for (int N : {10, 20, 50}) {
-        auto sine = SimpleMeshGen::generate_sine_mesh(N, 0.0, 2.0, 1.0, 1.0, 1.0);
-        EXPECT_EQ(sine.n_vertices(), expected_n_vertices(N)) << "N=" << N;
-        EXPECT_EQ(sine.n_cells(),    expected_n_cells(N))    << "N=" << N;
-    }
-}
- 
+
 // -----------------------------------------------------------------------------
 // Spiral mesh
 // -----------------------------------------------------------------------------
  
 TEST(SimpleMeshGenTest, SpiralMeshTopology) {
     const int N = 100;
-    auto spiral = SimpleMeshGen::generate_spiral_mesh(N, 2 * M_PI, 10.0, 5.0);
+    auto spiral = SimpleMeshGen::generate_spiral_mesh(N);
     EXPECT_EQ(spiral.n_vertices(), expected_n_vertices(N));
     EXPECT_EQ(spiral.n_cells(),    expected_n_cells(N));
 }
@@ -1341,3 +1327,14 @@ TEST(SimpleMeshGenTest, TrefoilKnotMeshFullRangeVsPartialRange) {
     EXPECT_NE(full.compute_signed_volume(), partial.compute_signed_volume());
 }
 
+
+
+
+// =============================================================================
+// Parametric meshes
+// =============================================================================
+
+
+TEST(ParametricMeshGenTest, MinimalNonStarShaped) {
+
+}

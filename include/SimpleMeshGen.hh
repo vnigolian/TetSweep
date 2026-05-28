@@ -142,16 +142,15 @@ namespace tet_weave {
 
 
         TetMesh generate_sine_mesh(int length,
-                             double torsion_rad,
-                             double period,
-                             double x_scale,
-                             double y_scale,
-                             double z_scale){
+                                   double axial_scaling = 1.0,
+                                   double torsion_rad=0.0,
+                                   double period=1.0,
+                                   double amplitude=1.0){
 
-            TetMesh mesh = generate_rod_mesh(length, 1.0, torsion_rad);
+            TetMesh mesh = generate_rod_mesh(length, axial_scaling, torsion_rad);
 
             //z_scale = z_scale / length;
-            double x_period = 0.0;
+            //double x_period = 0.0;
 
             for(auto v: mesh.vertices()){
                 auto pos = mesh.vertex(v);
@@ -160,17 +159,17 @@ namespace tet_weave {
                 auto y = pos[1];
                 auto z = pos[2];
 
-                auto sin_z = 2 * M_PI * z / length;
+                auto theta = 2 * M_PI * z / (length * axial_scaling);
 
                 //std::cout<<" - x = "<<x<<std::endl;
-                y += y_scale * std::sin(period * sin_z);
+                //y += y_scale * std::sin(period * sin_z);
                 //std::cout<<" - sine(T sin_z) = "<<std::sin(period * sin_z)<<std::endl;
-                x += x_scale * std::sin(x_period * sin_z);
+                y += amplitude * std::sin(period * theta);
                 //std::cout<<" - x + sine(T sin_z) = "<<x<<std::endl;
                 //std::cout<<" ------------------------- "<<std::endl;
 
-                auto scaled_z = sin_z * z_scale;
-                mesh.set_vertex(v, {x, y, scaled_z});
+                //auto scaled_z = sin_z * z_scale;
+                mesh.set_vertex(v, {x, y, z});
                 //std::cout<<" -- scaled x: "<<scaled_x<<std::endl;
             }
 
@@ -181,9 +180,9 @@ namespace tet_weave {
 
 
         TetMesh generate_spiral_mesh(int length,
-                                     double torsion_rad,
-                                     double x_scale,
-                                     double turn_count){
+                                     double torsion_rad = 0.0,
+                                     double x_scale = 1.0,
+                                     double turn_count = 1.0){
 
             double length_by_turn = (double)length / turn_count;
 
