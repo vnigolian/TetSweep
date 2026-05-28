@@ -1562,3 +1562,14 @@ TEST(ParametricComplexSpiralTest, WrongParamCountAsserts) {
     EXPECT_DEATH(parametric_complex_spiral({1.0, 2.0}, 0.0), "");
 }
 #endif
+
+
+
+// =============================================================================
+// ParametricMeshGen tests
+// =============================================================================
+  
+TEST(ParametricMeshGenTest, CircleParametricMesh) {
+
+
+}

@@ -2,6 +2,7 @@
 #pragma once
 
 #include "TetMesh.hh"
+#include "ParametricFunctions.hh"
 
 namespace tet_weave {
 
@@ -10,82 +11,28 @@ namespace tet_weave {
 
 
 
-#if 0
-        void setup_parametric_mesh_with_ref(TriangleMesh& ref_mesh,
-                                            TriangleMesh& mesh,
-                                            ParametricCurve2D curve,
-                                            argparse::ArgumentParser& parser){
-
-            setup_parametric_mesh(ref_mesh, parametric_circle, parser);
-
-            setup_parametric_mesh(mesh, curve, parser);
-
-        }
 
 
 
-
-        void setup_parametric_mesh(TriangleMesh& mesh,
-                                   ParametricCurve2D curve,
-                                   argparse::ArgumentParser& parser){
-
-            int v_count = parser.get<int>("--mesh-len");
-
-            double dt = 2.0 * M_PI / v_count;
-
-            for(int i(0); i<v_count; i++){
-                //std::cout<<" - t = "<<(i * dt)<<std::endl;
-                auto pos = curve(parser, i * dt);
-                auto v = mesh.add_vertex({pos[0], pos[1]});
-                //std::cout<<" - added vertex "<<v<<" at "<<pos.transpose()<<std::endl;
-            }
-
-            auto center_v = mesh.add_vertex({0, 0});
-
-            for(int i(0); i < v_count; i++){
-                int a = i;
-                int b = (i+1) % v_count;
-                //std::cout<<" - adding face "<<a<<", "<<b<<", "<<center_v<<std::endl;
-                mesh.add_face({VertexHandle(a), VertexHandle(b), center_v});
-            }
-
-            return; //below is to debug shape
-            mesh.delete_vertex(center_v);
-            mesh.collect_garbage();
-        }
+        TetMesh generate_parametric_mesh(ParametricCurve curve,
+                                         std::vector<double>& curve_params,
+                                         double t_min,
+                                         double t_max,
+                                         int length,
+                                         double thickness){
 
 
-        void setup_parametric_mesh_with_ref(TetMesh& ref_mesh,
-                                            TetMesh& mesh,
-                                            ParametricCurve3D curve,
-                                            argparse::ArgumentParser& parser){
-
-            generate_rod_mesh(ref_mesh, mesh, parser.get<int>("--mesh-len"), 1.0, parser.get<double>("--torsion"));
-
-            setup_parametric_mesh(mesh, curve, parser);
-
-        }
-
-
-        void setup_parametric_mesh(TetMesh& mesh,
-                                   ParametricCurve3D curve,
-                                   argparse::ArgumentParser& parser){
-
-
-            int length = parser.get<int>("--mesh-len");
-
-            double range = parser.get<double>("--parametric-range");
             //std::cout<<" - curve points: "<<std::endl;
-            std::vector<Eigen::Vector3d> curve_points;
+            std::vector<Vec3d> curve_points;
             for(int i(0); i <= length; i++){
 
-                double t = range * (2.0 * M_PI * i) / (length);
+                double t = t_min + (t_max - t_min) * (2.0 * M_PI * i) / (length);
 
-                curve_points.push_back(curve(parser, t));
+                curve_points.push_back(curve(curve_params, t));
                 //std::cout<<" - point "<<i<<" for t = "<<t<<" : "<<curve_pos<<std::endl;
             }
 
-            double orthogonal_scaling = parser.get<double>("--parametric-width");
+            
             int i(0);
             for(auto v: mesh.vertices()){
                 if(!i){
@@ -157,8 +104,6 @@ namespace tet_weave {
             mesh.delete_vertex(VertexHandle(0));
             mesh.collect_garbage();
         }
-    #endif
-
     }
 }
 
