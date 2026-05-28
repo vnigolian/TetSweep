@@ -5,51 +5,12 @@
 
 namespace tet_weave {
 
+
     namespace ParametricMeshGen {
 
 
-        #if 0
 
-        Eigen::Vector3d parametric_spiral_3D(argparse::ArgumentParser& parser, double t){
-            double center_radius = parser.get<double>("--paraspiral-center-radius");
-            int branches = parser.get<int>("--paraspiral-branches");
-            double branch_length = parser.get<double>("--paraspiral-branch-len");
-            double z_scale = parser.get<double>("--parametric-z-scale");
-
-            double radius = (std::cos(branches * t) + 1.0 + center_radius);
-            double angle = radius * branch_length;
-
-            Eigen::Matrix2d rotation;
-            rotation << std::cos(angle), -std::sin(angle),
-                    std::sin(angle),  std::cos(angle);
-            Eigen::Vector2d v({std::cos(t), std::sin(t)});
-
-            Eigen::Vector2d point = radius * rotation * v;
-            Eigen::Vector3d point_3d;
-            point_3d << point[0], point[1], z_scale * t;
-
-            return point_3d;
-        }
-
-        Eigen::Vector3d parametric_trefoil_knot(argparse::ArgumentParser& parser, double t){
-            return { std::sin(t) + 2 * std::sin(2 * t),
-                     std::cos(t) - 2 * std::cos(2 * t),
-                     -std::sin(3 * t)};
-        }
-
-
-        Eigen::Vector3d parametric_complex_spiral(argparse::ArgumentParser& parser, double t){
-            double a = parser.get<double>("--complex-spiral-a");
-            double b = parser.get<double>("--complex-spiral-b");
-            double c = parser.get<double>("--complex-spiral-c");
-            double z_scale = parser.get<double>("--parametric-z-scale");
-
-            return {std::cos(a * t) + std::cos(b * t) / 2.0 + std::sin(c * t) / 3.0,
-                    std::sin(a * t) + std::sin(b * t) / 2.0 + std::cos(c * t) / 3.0,
-                    z_scale * t};
-        }
-
-
+#if 0
         void setup_parametric_mesh_with_ref(TriangleMesh& ref_mesh,
                                             TriangleMesh& mesh,
                                             ParametricCurve2D curve,
@@ -60,6 +21,8 @@ namespace tet_weave {
             setup_parametric_mesh(mesh, curve, parser);
 
         }
+
+
 
 
         void setup_parametric_mesh(TriangleMesh& mesh,
