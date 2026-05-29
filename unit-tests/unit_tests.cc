@@ -1131,12 +1131,19 @@ TEST(SimpleMeshGenTest, TrefoilKnotMesh) {
 }
 
 
+TEST(SimpleMeshGenTest, LayerMesh) {
+
+    const int N(2), M(5);
+    auto layer = SimpleMeshGen::generate_layer_mesh(M, N);
+    layer.write_to_file("layer.ovm");
+    
+}
+
+
 // =============================================================================
 // SimpleMeshGen tests
 // =============================================================================
- 
-using namespace tet_weave::SimpleMeshGen;
- 
+  
 // Helper: expected vertex and cell counts for any rod-topology mesh of length N.
 static int expected_n_vertices(int N) { return (N + 1) * 4 + 1; }
 static int expected_n_cells(int N)    { return 2 * (4 * N + 2); }
@@ -1568,7 +1575,7 @@ TEST(ParametricComplexSpiralTest, WrongParamCountAsserts) {
 // ParametricMeshGen tests
 // =============================================================================
   
-TEST(ParametricMeshGenTest, ParametricMeshesExport) {
+TEST(ParametricMeshGenTest, ParametricCurveMeshesExport) {
 
     auto circle_mesh = ParametricMeshGen::generate_parametric_mesh(circle, {2.0},
                                                               0.25, 1.0, //t range 
@@ -1758,3 +1765,15 @@ TEST(ParametricMeshGenTest, DifferentCurvesGiveDifferentVolumes) {
     auto m2 = ParametricMeshGen::generate_parametric_mesh(trefoil_knot, {},         0.0, 1.0, length, 0.5);
     EXPECT_NE(m1.compute_signed_volume(), m2.compute_signed_volume());
 }
+
+
+/*TEST(ParametricMeshGenTest, ParametricSurfaceMeshesExport) {
+
+    auto sphere_mesh = ParametricMeshGen::generate_parametric_mesh(sphere, {1.0},
+                                                              0.0, 2 * M_PI, //u range 
+                                                              0.0, M_PI); //v range //length, thickness
+    sphere_mesh.write_to_file("sphere.ovm");
+
+   
+
+}*/

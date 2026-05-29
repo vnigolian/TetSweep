@@ -7,6 +7,8 @@ namespace tet_weave{
 
     using ParametricCurve = Vec3d(*)(const std::vector<double>&, double);
 
+    using ParametricSurface = Vec3d(*)(const std::vector<double>&, double, double);
+
 
     Vec3d circle(const std::vector<double>& params, double t){
         assert(params.size() == 2 && "parametric circle takes exactly 2 argument");
@@ -62,6 +64,17 @@ namespace tet_weave{
         return {std::cos(a * t) + std::cos(b * t) / 2.0 + std::sin(c * t) / 3.0,
                 std::sin(a * t) + std::sin(b * t) / 2.0 + std::cos(c * t) / 3.0,
                 z_scale * t};
+    }
+
+
+    Vec3d sphere(const std::vector<double>& params, double u, double v){
+        assert(params.size() == 1 && "parametric sphere takes exactly 1 argument");
+
+        double r = params[0];
+
+        return params[0] * Vec3d(std::sin(u) * std::cos(v), 
+                                 std::sin(u) * std::sin(v), 
+                                 std::cos(u));
     }
 
 }

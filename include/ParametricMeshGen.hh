@@ -12,9 +12,6 @@ namespace tet_weave {
 
 
 
-
-
-
         TetMesh generate_parametric_mesh(ParametricCurve curve,
                                          const std::vector<double>& curve_params,
                                          double t_min,
@@ -103,6 +100,30 @@ namespace tet_weave {
                 i++;
             }
             
+            return mesh;
+        }
+
+
+        TetMesh generate_parametric_mesh(ParametricSurface surface,
+                                         const std::vector<double>& surface_params,
+                                         double u_min,
+                                         double u_max,
+                                         int u_steps,
+                                         double v_min,
+                                         double v_max,
+                                        int v_steps){
+
+            TetMesh mesh;
+
+            auto v0 = mesh.add_vertex(0,0,0);
+
+            for(int i(0); i<u_steps; i++){
+                for(int j(0); j<v_steps; j++){
+                    
+
+                }
+            }
+
             return mesh;
         }
     }
