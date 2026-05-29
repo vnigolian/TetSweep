@@ -1342,7 +1342,7 @@ static double xy_norm(const Vec3d& v) {
 }
  
 // -----------------------------------------------------------------------------
-// parametric_circle
+// circle
 // -----------------------------------------------------------------------------
  
 TEST(ParametricCircleTest, AtTZeroReturnsRadiusOnXAxis) {
@@ -1460,7 +1460,7 @@ TEST(ParametricSpiralTest, WrongParamCountAsserts) {
 #endif
  
 // -----------------------------------------------------------------------------
-// parametric_trefoil_knot
+// trefoil_knot
 // -----------------------------------------------------------------------------
  
 TEST(ParametricTrefoilKnotTest, AtTZero) {
@@ -1511,7 +1511,7 @@ TEST(ParametricTrefoilKnotTest, IgnoresParams) {
 }
  
 // -----------------------------------------------------------------------------
-// parametric_complex_spiral
+// multi_branch_spiral
 // -----------------------------------------------------------------------------
  
 TEST(ParametricComplexSpiralTest, AtTZero) {
@@ -1580,11 +1580,181 @@ TEST(ParametricMeshGenTest, ParametricMeshesExport) {
                                                                                   200, 0.1);
     multi_branch_spiral_mesh.write_to_file("multi_branch_spiral.ovm");
 
-
     auto funny_spiral_mesh = ParametricMeshGen::generate_parametric_mesh(funny_spiral, {0.9, 0.7, 10.0, 1.0},
                                                                                   0.0, 2.0, 
                                                                                   200, 0.2);
     funny_spiral_mesh.write_to_file("funny_spiral.ovm");
 
+}
 
+
+// Helper: compute the curve point for a given vertex index in a parametric mesh.
+// Mirrors the indexing logic in generate_parametric_mesh.
+static Vec3d curve_point_for_vertex(ParametricCurve curve,
+                                    const std::vector<double>& params,
+                                    double t_min, double t_max,
+                                    int length, int vertex_idx) {
+    std::vector<Vec3d> curve_points;
+    for (int i = 0; i <= length; ++i) {
+        double t = t_min + (t_max - t_min) * (2.0 * M_PI * i) / length;
+        curve_points.push_back(curve(params, t));
+    }
+    int point_idx      = (vertex_idx - 1) / 4;
+    int next_point_idx = point_idx + 1;
+    if (next_point_idx >= (int)curve_points.size()) {
+        next_point_idx = point_idx;
+        point_idx      = next_point_idx - 1;
+        return curve_points[next_point_idx];
+    }
+    return curve_points[point_idx];
+}
+ 
+// -----------------------------------------------------------------------------
+// Topology
+// -----------------------------------------------------------------------------
+ 
+TEST(ParametricMeshGenTest, TopologyMatchesRodMesh) {
+    const int length = 10;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0},
+                                         0.0, 1.0, length, 0.5);
+    EXPECT_EQ(mesh.n_vertices(), expected_n_vertices(length));
+    EXPECT_EQ(mesh.n_cells(),    expected_n_cells(length));
+}
+ 
+TEST(ParametricMeshGenTest, TopologyScalesWithLength) {
+    for (int length : {5, 10, 20, 50}) {
+        auto mesh = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0},
+                                             0.0, 1.0, length, 0.5);
+        EXPECT_EQ(mesh.n_vertices(), expected_n_vertices(length)) << "length=" << length;
+        EXPECT_EQ(mesh.n_cells(),    expected_n_cells(length))    << "length=" << length;
+    }
+}
+ 
+TEST(ParametricMeshGenTest, TopologyIndependentOfCurveType) {
+    const int length = 10;
+    auto m1 = ParametricMeshGen::generate_parametric_mesh(circle,       {1.0, 0.0},         0.0, 1.0, length, 0.5);
+    auto m2 = ParametricMeshGen::generate_parametric_mesh(trefoil_knot, {},                  0.0, 1.0, length, 0.5);
+    auto m3 = ParametricMeshGen::generate_parametric_mesh(multi_branch_spiral,{1.0, 2.0, 3.0, 0.0}, 0.0, 1.0, length, 0.5);
+    EXPECT_EQ(m1.n_vertices(), m2.n_vertices());
+    EXPECT_EQ(m1.n_vertices(), m3.n_vertices());
+    EXPECT_EQ(m1.n_cells(),    m2.n_cells());
+    EXPECT_EQ(m1.n_cells(),    m3.n_cells());
+}
+ 
+// -----------------------------------------------------------------------------
+// Interior vertex
+// -----------------------------------------------------------------------------
+ 
+TEST(ParametricMeshGenTest, InteriorVertexUntouched) {
+    // The interior vertex (index 0) is skipped by the transform and keeps
+    // its rod mesh position: (0, 0, length/2).
+    const int length = 10;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0},
+                                         0.0, 1.0, length, 0.5);
+    EXPECT_EQ(mesh.vertex(VertexHandle(0)), Vec3d(0.0, 0.0, length * 0.5));
+}
+ 
+// -----------------------------------------------------------------------------
+// thickness = 0: all ring vertices collapse onto their curve point
+// -----------------------------------------------------------------------------
+ 
+TEST(ParametricMeshGenTest, ZeroThicknessCollapsesToCurve) {
+    const int length = 8;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0},
+                                         0.0, 1.0, length, 0.0);
+    // Vertices 1..4 all map to curve_points[0], etc.
+    for (int vi = 1; vi < mesh.n_vertices(); ++vi) {
+        Vec3d expected = curve_point_for_vertex(circle, {1.0, 0.0},
+                                                0.0, 1.0, length, vi);
+        Vec3d actual   = mesh.vertex(VertexHandle(vi));
+        EXPECT_NEAR(actual.x(), expected.x(), 1e-9) << "vertex " << vi;
+        EXPECT_NEAR(actual.y(), expected.y(), 1e-9) << "vertex " << vi;
+        EXPECT_NEAR(actual.z(), expected.z(), 1e-9) << "vertex " << vi;
+    }
+}
+ 
+TEST(ParametricMeshGenTest, ZeroThicknessAllRingVerticesCoincide) {
+    // With thickness=0 all 4 vertices in a ring collapse to the same point.
+    const int length = 6;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(trefoil_knot, {},
+                                         0.0, 1.0, length, 0.0);
+    for (int ring = 0; ring < length; ++ring) {
+        int base = 1 + ring * 4;
+        Vec3d p0 = mesh.vertex(VertexHandle(base));
+        for (int j = 1; j < 4; ++j) {
+            Vec3d pj = mesh.vertex(VertexHandle(base + j));
+            EXPECT_NEAR(p0.x(), pj.x(), 1e-9) << "ring=" << ring << " j=" << j;
+            EXPECT_NEAR(p0.y(), pj.y(), 1e-9) << "ring=" << ring << " j=" << j;
+            EXPECT_NEAR(p0.z(), pj.z(), 1e-9) << "ring=" << ring << " j=" << j;
+        }
+    }
+}
+ 
+// -----------------------------------------------------------------------------
+// Ring vertex distance from curve point
+// -----------------------------------------------------------------------------
+ 
+TEST(ParametricMeshGenTest, RingVerticesEquidistantFromCurvePoint) {
+    // tp1 and tp2 are orthonormal. The 4 rod vertex positions have
+    // xy norm 1/sqrt(2). So each ring vertex is at distance
+    // thickness/sqrt(2) from its curve point.
+    const int    length    = 10;
+    const double thickness = 1.0;
+    const double expected_dist = thickness / std::sqrt(2.0);
+ 
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0},
+                                         0.0, 1.0, length, thickness);
+ 
+    for (int ring = 0; ring < length; ++ring) {
+        Vec3d cp = curve_point_for_vertex(circle, {1.0, 0.0},
+                                          0.0, 1.0, length, 1 + ring * 4);
+        for (int j = 0; j < 4; ++j) {
+            Vec3d vp   = mesh.vertex(VertexHandle(1 + ring * 4 + j));
+            double dist = (vp - cp).norm();
+            EXPECT_NEAR(dist, expected_dist, 1e-9)
+                << "ring=" << ring << " j=" << j;
+        }
+    }
+}
+ 
+TEST(ParametricMeshGenTest, RingVertexDistanceScalesWithThickness) {
+    // Doubling thickness should double the distance from the curve point.
+    const int length = 10;
+    const int ring   = 3;
+    const int vi     = 1 + ring * 4;
+ 
+    auto m1 = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0}, 0.0, 1.0, length, 1.0);
+    auto m2 = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0}, 0.0, 1.0, length, 2.0);
+ 
+    Vec3d cp = curve_point_for_vertex(circle, {1.0, 0.0}, 0.0, 1.0, length, vi);
+    double d1 = (m1.vertex(VertexHandle(vi)) - cp).norm();
+    double d2 = (m2.vertex(VertexHandle(vi)) - cp).norm();
+    EXPECT_NEAR(d2, 2.0 * d1, 1e-9);
+}
+ 
+// -----------------------------------------------------------------------------
+// Volume
+// -----------------------------------------------------------------------------
+ 
+TEST(ParametricMeshGenTest, NonZeroVolumeForNonDegenerateCurve) {
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 1.0}, 0.0, 1.0, 10, 0.5);
+    EXPECT_GT(std::abs(mesh.compute_signed_volume()), 0.0);
+}
+ 
+TEST(ParametricMeshGenTest, VolumeScalesWithThickness) {
+    // Volume scales as thickness^2 (cross-section area scales as thickness^2,
+    // length is fixed by the curve).
+    const int length = 10;
+    auto m1 = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0}, 0.0, 1.0, length, 1.0);
+    auto m2 = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0}, 0.0, 1.0, length, 2.0);
+    double v1 = std::abs(m1.compute_signed_volume());
+    double v2 = std::abs(m2.compute_signed_volume());
+    EXPECT_NEAR(v2, 4.0 * v1, 1e-6);
+}
+ 
+TEST(ParametricMeshGenTest, DifferentCurvesGiveDifferentVolumes) {
+    const int length = 20;
+    auto m1 = ParametricMeshGen::generate_parametric_mesh(circle,       {1.0, 1.0}, 0.0, 1.0, length, 0.5);
+    auto m2 = ParametricMeshGen::generate_parametric_mesh(trefoil_knot, {},         0.0, 1.0, length, 0.5);
+    EXPECT_NE(m1.compute_signed_volume(), m2.compute_signed_volume());
 }
