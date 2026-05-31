@@ -95,6 +95,13 @@ namespace tet_weave {
             return *this;
         }
 
+        Vec3d &operator/=(double s) {
+            x_ /= s;
+            y_ /= s;
+            z_ /= s;
+            return *this;
+        }
+
         // -------------------------------------------------------------------------
         // Arithmetic — creating new vectors
         // -------------------------------------------------------------------------

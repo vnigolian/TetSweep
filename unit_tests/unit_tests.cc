@@ -1709,17 +1709,6 @@ TEST(ParametricMeshGenTest, DifferentCurvesGiveDifferentVolumes) {
 }
 
 
-/*TEST(ParametricMeshGenTest, ParametricSurfaceMeshesExport) {
-
-    auto sphere_mesh = ParametricMeshGen::generate_parametric_mesh(sphere, {1.0},
-                                                              0.0, 2 * M_PI, //u range 
-                                                              0.0, M_PI); //v range //length, thickness
-    sphere_mesh.write_to_file("sphere.ovm");
-
-   
-
-}*/
-
 
 
 
@@ -1824,13 +1813,6 @@ TEST_F(MeshExportTest, TrefoilKnotMesh) {
 }
 
 
-TEST_F(MeshExportTest, LayerMesh) {
-
-    const int M(7), N(13);
-    mesh_ = SimpleMeshGen::generate_layer_mesh(M, N);
-    mesh_name_ = "layer.ovm";
-}
-
 
 TEST_F(MeshExportTest, CircleMesh) {
 
@@ -1866,3 +1848,52 @@ TEST_F(MeshExportTest, ParametricTrefoilKnot) {
     mesh_name_ = "para_trefoil.ovm";
 
 }
+
+
+TEST_F(MeshExportTest, LayerMesh) {
+
+    const int M(7), N(13);
+    mesh_ = SimpleMeshGen::generate_layer_mesh(M, N);
+    mesh_name_ = "layer.ovm";
+}
+
+
+TEST_F(MeshExportTest, Sine3d) {
+
+    int M(60), N(40);
+    mesh_ = ParametricMeshGen::generate_parametric_mesh(sine3d, {2.0, 2.0},
+                                                              0.0, 2 * M_PI, M, //u range 
+                                                              0.0, 2 * M_PI, N, //v range 
+                                                              0.2); //thickness
+    mesh_name_ = "sine3d.ovm";
+
+}
+
+
+
+TEST_F(MeshExportTest, SpherePatch) {
+
+    int M(10), N(20);
+    mesh_ = ParametricMeshGen::generate_parametric_mesh(sphere, {2.0},
+                                                              0.1 * M_PI, 0.75 * M_PI, M, //u range 
+                                                              0.0, 0.66 * M_PI, N, //v range 
+                                                              0.2); //thickness
+    mesh_name_ = "sphere.ovm";
+
+}
+
+
+TEST_F(MeshExportTest, HelicoidalRing) {
+
+    int M(10), N(200);
+    mesh_ = ParametricMeshGen::generate_parametric_mesh(helicoidal_ring, {10.0},
+                                                              0.0, 0.5, M, //u range 
+                                                              0.0, 0.999, N, //v range 
+                                                              0.2); //thickness
+    mesh_name_ = "helicoidal_ring.ovm";
+
+}
+
+
+
+

@@ -112,18 +112,46 @@ namespace tet_weave {
                                          int u_steps,
                                          double v_min,
                                          double v_max,
-                                        int v_steps){
+                                         int v_steps,
+                                         double thickness){
 
-            TetMesh mesh;
+            const double eps = 1e-6;
+            auto mesh = SimpleMeshGen::generate_layer_mesh(u_steps, v_steps);
 
-            auto v0 = mesh.add_vertex(0,0,0);
+            Vec3d centroid(0,0,0);
 
-            for(int i(0); i<u_steps; i++){
-                for(int j(0); j<v_steps; j++){
+            for(int i(0); i<=u_steps; i++){
+                for(int j(0); j<=v_steps; j++){
                     
+                    auto vh_b = SimpleMeshGen::layer_vertex_id(u_steps, v_steps, i,j,0);
+                    auto vh_t = SimpleMeshGen::layer_vertex_id(u_steps, v_steps, i,j,1);
+
+                    double u = u_min + i * (u_max - u_min) / u_steps;
+                    double v = v_min + j * (v_max - v_min) / v_steps;
+
+                    auto x = surface(surface_params, u, v);
+
+
+                    Vec3d dSdu = (surface(surface_params, u + eps, v) - surface(surface_params, u - eps, v)) * (0.5 / eps);
+                    Vec3d dSdv = (surface(surface_params, u, v + eps) - surface(surface_params, u, v - eps)) * (0.5 / eps);
+
+
+                    Vec3d n = dSdu.cross(dSdv).normalized();
+
+                    mesh.set_vertex(vh_b, x - 0.5 * thickness * n);
+                    mesh.set_vertex(vh_t, x + 0.5 * thickness * n);
+
+                    centroid += mesh.vertex(vh_b);
+                    centroid += mesh.vertex(vh_t);
 
                 }
             }
+
+            centroid /= (2 * (u_steps +1) * (v_steps + 1));
+
+
+            mesh.set_vertex(VertexHandle(0), centroid);
+
 
             return mesh;
         }

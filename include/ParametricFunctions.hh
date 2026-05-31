@@ -69,4 +69,37 @@ namespace tet_weave{
                                  std::cos(u));
     }
 
+
+    Vec3d sine3d(const std::vector<double>& params, double u, double v){
+                assert(params.size() > 2 && "parametric sine 3d takes at most 2 argument");
+
+                double amp = 1.0;
+                double period = 1.0;
+
+                if(params.size() >= 1){
+                    amp = params[0];
+                }
+
+                if(params.size() >= 2){
+                    period = params[1];
+                }
+
+                return amp * Vec3d(u,v, std::sin(period * u) * std::sin(period * v));
+
+    }
+
+        Vec3d helicoidal_ring(const std::vector<double>& params, double u, double v){
+
+            assert(params.size() != 1 && "helicoidal rings surface takes exactly 1 argument");
+
+            const double tau = 2 * M_PI;
+            double loops = params[0];
+
+            return Vec3d(
+                std::cos(tau * v) * std::cos(tau * u) + (std::cos(loops * tau * v) * (std::sin(tau * u) +3) + 7) * (-sin(tau * v)),
+                std::sin(tau * u) * std::cos(tau * u) + (std::cos(loops * tau * v) * (std::sin(tau * u) +3) + 7) * ( cos(tau * v)),
+                std::sin(loops * tau * v) * (std::sin(tau * u) + 3)
+            );
+
+        }
 }

@@ -313,6 +313,12 @@ namespace tet_weave {
 
 
 
+            // Helper: global handle for boundary vertex (i,j,k)
+            VertexHandle layer_vertex_id(int u_dim, int v_dim, 
+                                         int i, int j, int k) {
+                return VertexHandle(k * ((u_dim+1) * (v_dim+1)) + i * (v_dim + 1) + j + 1);
+            };
+
         TetMesh generate_layer_mesh(int u_steps, int v_steps) {
             assert(u_steps >= 1 && "generate_layer_mesh: u_steps must be >= 1");
             assert(v_steps >= 1 && "generate_layer_mesh: v_steps must be >= 1");
@@ -330,10 +336,6 @@ namespace tet_weave {
                         mesh.add_vertex(i, j, k);
             
 
-            // Helper: global handle for boundary vertex (i,j)
-            auto vh = [&](int i, int j, int k) {
-                return VertexHandle(k * ((u_steps+1) * (v_steps+1)) + i * (v_steps + 1) + j + 1);
-            };
 
             // Each quad cell → 2 tets via the interior vertex.
             // Quad corners: v00=(i,j), v10=(i+1,j), v01=(i,j+1), v11=(i+1,j+1)
@@ -344,10 +346,10 @@ namespace tet_weave {
             for(int k (0); k<2;k++){
                 for (int i = 0; i < u_steps; ++i) {
                     for (int j = 0; j < v_steps; ++j) {
-                        auto v00 = vh(i,   j  , k);
-                        auto v10 = vh(i+1, j  , k);
-                        auto v01 = vh(i,   j+1, k);
-                        auto v11 = vh(i+1, j+1, k);
+                        auto v00 = layer_vertex_id(u_steps, v_steps, i,   j  , k);
+                        auto v10 = layer_vertex_id(u_steps, v_steps, i+1, j  , k);
+                        auto v01 = layer_vertex_id(u_steps, v_steps, i,   j+1, k);
+                        auto v11 = layer_vertex_id(u_steps, v_steps, i+1, j+1, k);
 
                         // tet0: vi, v00, v11, v10  (right-hand rule: face v00,v11,v10 points toward vi)
                         if(k){
@@ -365,10 +367,10 @@ namespace tet_weave {
             for(int j: {0, v_steps}){
                 for(int i(0); i<u_steps; i++){
 
-                    auto v00 = vh(i,   j, 0);
-                    auto v10 = vh(i+1, j, 0);
-                    auto v01 = vh(i,   j, 1);
-                    auto v11 = vh(i+1, j, 1);
+                    auto v00 = layer_vertex_id(u_steps, v_steps, i,   j, 0);
+                    auto v10 = layer_vertex_id(u_steps, v_steps, i+1, j, 0);
+                    auto v01 = layer_vertex_id(u_steps, v_steps, i,   j, 1);
+                    auto v11 = layer_vertex_id(u_steps, v_steps, i+1, j, 1);
 
                     if(j){
                         mesh.add_cell({vi, v00, v11, v10});
@@ -387,10 +389,10 @@ namespace tet_weave {
 
                     //std::cout<<" ------ j = "<<j<<std::endl;
 
-                    auto v00 = vh(i, j,   0);
-                    auto v10 = vh(i, j+1, 0);
-                    auto v01 = vh(i, j,   1);
-                    auto v11 = vh(i, j+1, 1);
+                    auto v00 = layer_vertex_id(u_steps, v_steps, i, j,   0);
+                    auto v10 = layer_vertex_id(u_steps, v_steps, i, j+1, 0);
+                    auto v01 = layer_vertex_id(u_steps, v_steps, i, j,   1);
+                    auto v11 = layer_vertex_id(u_steps, v_steps, i, j+1, 1);
 
                     //std::cout<<" - indices: {"<<v00<<", "<<v10<<", "<<v01<<","<<v11<<"}"<<std::endl;
 
