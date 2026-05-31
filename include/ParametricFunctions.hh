@@ -32,17 +32,9 @@ namespace tet_weave{
         double radius = (std::cos(branches * t) + 1.0 + center_radius);
         double angle = radius * branch_length;
 
-        /*Eigen::Matrix2d rotation;
-        rotation << std::cos(angle), -std::sin(angle),
-                std::sin(angle),  std::cos(angle);
-        Eigen::Vector2d v({std::cos(t), std::sin(t)});
-
-        Eigen::Vector2d point = radius * rotation * v;
-        Eigen::Vector3d point_3d;
-        point_3d << point[0], point[1], z_scale * t;*/
 
         Vec3d p = {std::cos(t), std::sin(t), z_scale * t};
-        return p.rotate({0,0,1}, angle);
+        return radius * p.rotate({0,0,1}, angle);
     }
 
 

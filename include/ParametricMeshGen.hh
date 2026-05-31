@@ -31,6 +31,7 @@ namespace tet_weave {
             }
 
             auto mesh = SimpleMeshGen::generate_rod_mesh(length);
+            mesh.set_vertex(VertexHandle(0), {0,0,0});
             
             int i(0);
             for(auto v: mesh.vertices()){

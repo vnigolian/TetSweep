@@ -1381,45 +1381,51 @@ TEST(ParametricCircleTest, WrongParamCountAsserts) {
 // -----------------------------------------------------------------------------
 // parametric_spiral
 // -----------------------------------------------------------------------------
- 
-TEST(ParametricSpiralTest, ZeroZScaleKeepsCurveFlat) {
+
+ TEST(ParametricSpiralTest, ZeroZScaleKeepsCurveFlat) {
     // z_scale=0 → z component should always be 0.
     for (double t : {0.0, 1.0, M_PI, 2.0 * M_PI}) {
         Vec3d p = multi_branch_spiral({0.0, 1, 1.0, 0.0}, t);
         EXPECT_NEAR(p.z(), 0.0, curve_epsilon) << "t=" << t;
     }
 }
- 
+
 TEST(ParametricSpiralTest, ZeroBranchLengthNoRotation) {
-    // branch_length=0 → angle=0 → rotate by 0 → p = (cos(t), sin(t), z_scale*t).
-    const double z_scale = 1.0;
+    // branch_length=0 → angle=0 → no rotation → p = radius*(cos(t), sin(t), z_scale*t).
+    const double z_scale = 1.0, center_radius = 0.0;
+    const int branches = 1;
     for (double t : {0.0, M_PI / 4.0, M_PI / 2.0, M_PI}) {
-        Vec3d p        = multi_branch_spiral({0.0, 1, 0.0, z_scale}, t);
-        Vec3d expected = {std::cos(t), std::sin(t), z_scale * t};
+        double radius = std::cos(branches * t) + 1.0 + center_radius;
+        Vec3d p        = multi_branch_spiral({center_radius, branches, 0.0, z_scale}, t);
+        Vec3d expected = radius * Vec3d{std::cos(t), std::sin(t), z_scale * t};
         EXPECT_NEAR(p.x(), expected.x(), curve_epsilon) << "t=" << t;
         EXPECT_NEAR(p.y(), expected.y(), curve_epsilon) << "t=" << t;
         EXPECT_NEAR(p.z(), expected.z(), curve_epsilon) << "t=" << t;
     }
 }
- 
-TEST(ParametricSpiralTest, OutputIsUnitNormInXY) {
-    // The base vector before rotation is always on the unit circle,
-    // and rotation preserves norm → xy norm should always be 1.
+
+TEST(ParametricSpiralTest, XYNormEqualsRadius) {
+    // xy norm should equal radius = cos(branches*t) + 1 + center_radius.
+    const double center_radius = 1.0;
+    const int branches = 2;
     for (double t : {0.0, 0.5, 1.0, M_PI}) {
-        Vec3d p = multi_branch_spiral({1.0, 2, 0.5, 0.0}, t);
-        EXPECT_NEAR(xy_norm(p), 1.0, curve_epsilon) << "t=" << t;
+        double radius = std::cos(branches * t) + 1.0 + center_radius;
+        Vec3d p = multi_branch_spiral({center_radius, branches, 0.5, 0.0}, t);
+        EXPECT_NEAR(xy_norm(p), radius, curve_epsilon) << "t=" << t;
     }
 }
- 
+
 TEST(ParametricSpiralTest, ZComponentLinearInT) {
-    // z = z_scale * t (unaffected by rotation around z-axis).
-    const double z_scale = 2.0;
+    // z = radius * z_scale * t (radius affects z too since p is scaled).
+    const double z_scale = 2.0, center_radius = 0.0;
+    const int branches = 1;
     for (double t : {0.0, 1.0, 2.0, M_PI}) {
-        Vec3d p = multi_branch_spiral({1.0, 1, 1.0, z_scale}, t);
-        EXPECT_NEAR(p.z(), z_scale * t, curve_epsilon) << "t=" << t;
+        double radius = std::cos(branches * t) + 1.0 + center_radius;
+        Vec3d p = multi_branch_spiral({center_radius, branches, 0.0, z_scale}, t);
+        EXPECT_NEAR(p.z(), radius * z_scale * t, curve_epsilon) << "t=" << t;
     }
 }
- 
+
 #ifndef NDEBUG
 TEST(ParametricSpiralTest, WrongParamCountAsserts) {
     EXPECT_DEATH(multi_branch_spiral({1.0, 2.0}, 0.0), "");
@@ -1568,6 +1574,13 @@ TEST(ParametricMeshGenTest, TopologyMatchesRodMesh) {
     EXPECT_EQ(mesh.n_vertices(), expected_n_vertices(length));
     EXPECT_EQ(mesh.n_cells(),    expected_n_cells(length));
 }
+
+TEST(ParametricMeshGenTest, InteriorVertexAtTheOrigin) {
+    const int length = 10;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0},
+                                         0.0, 1.0, length, 0.5);
+    EXPECT_EQ(mesh.vertex(VertexHandle(0)), Vec3d(0,0,0));
+}
  
 TEST(ParametricMeshGenTest, TopologyScalesWithLength) {
     for (int length : {5, 10, 20, 50}) {
@@ -1588,19 +1601,7 @@ TEST(ParametricMeshGenTest, TopologyIndependentOfCurveType) {
     EXPECT_EQ(m1.n_cells(),    m2.n_cells());
     EXPECT_EQ(m1.n_cells(),    m3.n_cells());
 }
- 
-// -----------------------------------------------------------------------------
-// Interior vertex
-// -----------------------------------------------------------------------------
- 
-TEST(ParametricMeshGenTest, InteriorVertexUntouched) {
-    // The interior vertex (index 0) is skipped by the transform and keeps
-    // its rod mesh position: (0, 0, length/2).
-    const int length = 10;
-    auto mesh = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0},
-                                         0.0, 1.0, length, 0.5);
-    EXPECT_EQ(mesh.vertex(VertexHandle(0)), Vec3d(0.0, 0.0, length * 0.5));
-}
+
  
 // -----------------------------------------------------------------------------
 // thickness = 0: all ring vertices collapse onto their curve point
@@ -1772,7 +1773,7 @@ protected:
         
         mesh_.write_to_file(mesh_name_);
         compare_against_reference(mesh_name_);
-        std::filesystem::remove(mesh_name_);
+        //std::filesystem::remove(mesh_name_);
     }
 
     TetMesh mesh_;
@@ -1841,9 +1842,9 @@ TEST_F(MeshExportTest, CircleMesh) {
 
 
 TEST_F(MeshExportTest, MultiBranchSpiral) {
-    mesh_ = ParametricMeshGen::generate_parametric_mesh(multi_branch_spiral, {1.0, 3, 3.0, 0.0},
-                                                                                  0.0, 0.2, 
-                                                                                  200, 0.1);
+    mesh_ = ParametricMeshGen::generate_parametric_mesh(multi_branch_spiral, {0.5, 5.0, 2.0, 0.1},
+                                                                                  0.0, 1.0, 
+                                                                                  100, 0.1);
     mesh_name_ = "multi_branch_spiral.ovm";
 }
 
