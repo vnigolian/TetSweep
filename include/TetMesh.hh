@@ -30,6 +30,16 @@ private:
 };
 
 
+    inline std::ostream &operator<<(std::ostream &os, const VertexHandle &vh) {
+        os << vh.idx();
+        return os;
+    }
+
+    inline std::ostream &operator<<(std::ostream &os, const CellHandle &ch) {
+        os << ch.idx();
+        return os;
+    }
+
     // =============================================================================
     // Ranges
     // =============================================================================

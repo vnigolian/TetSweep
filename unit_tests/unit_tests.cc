@@ -995,8 +995,6 @@ TEST(VoxelGridMeshGenTest, KnottedHoleExport) {
 
     EXPECT_EQ(mesh.n_vertices(), 480);
     EXPECT_EQ(mesh.n_cells(), 1405);
-
-    mesh.write_to_file("knotted_hole.ovm");
 }
 
 
@@ -1017,9 +1015,6 @@ TEST(SimpleMeshGenTest, MinimalNonStarShaped) {
     EXPECT_EQ(domain_mesh.n_vertices(),9);
     EXPECT_EQ(domain_mesh.n_cells(), 12);
     EXPECT_NEAR(domain_mesh.compute_signed_volume(), 32.0/3.0, epsilon);
-
-    codomain_mesh.write_to_file("min_non_star_shaped_codomain.ovm");
-    domain_mesh.write_to_file("min_non_star_shaped_domain.ovm");
 }
 
 
@@ -1099,45 +1094,11 @@ TEST(SimpleMeshGenTest, RodMeshTorsion) {
             auto expected_last_v_pos = Vec3d(-0.5,0.5, N).rotate({0.0, 0.0, 1.0}, t_rad);
 
             EXPECT_EQ(last_v_pos, expected_last_v_pos);
-
-            rod.write_to_file("torsion_rod.ovm");
         }
     }
 }
 
 
-TEST(SimpleMeshGenTest, SineMesh) {
-    const int N(100);
-    //default mesh follows sin(x/N);
-    SimpleMeshGen::generate_sine_mesh(N);
-    auto sine = SimpleMeshGen::generate_sine_mesh(N, 5.0/N, M_PI/2.0, 2.0, 2.0);
-    sine.write_to_file("sine.ovm");
-}
-
-
-TEST(SimpleMeshGenTest, SpiralMesh) {
-    const int N(100);
-    auto spiral = SimpleMeshGen::generate_spiral_mesh(N, 2*M_PI, 10.0, 5.0);
-    spiral.write_to_file("spiral.ovm");
-
-}
-
-
-TEST(SimpleMeshGenTest, TrefoilKnotMesh) {
-    const int N(100);
-    auto trefoil = SimpleMeshGen::generate_trefoil_knot_mesh(N, 4*M_PI, 0.9);
-    //std::cout<<" ------------------------ t = "<<t_deg<<" / "<<t_rad<<std::endl;
-    trefoil.write_to_file("trefoil.ovm");
-}
-
-
-TEST(SimpleMeshGenTest, LayerMesh) {
-
-    const int N(2), M(5);
-    auto layer = SimpleMeshGen::generate_layer_mesh(M, N);
-    layer.write_to_file("layer.ovm");
-    
-}
 
 
 // =============================================================================
@@ -1241,7 +1202,6 @@ TEST(SimpleMeshGenTest, SineMeshZeroAmplitudeMatchesRodVolume) {
     const int N = 20;
     auto rod  = SimpleMeshGen::generate_rod_mesh(N, 1.0, 0.0);
     auto sine = SimpleMeshGen::generate_sine_mesh(N, 1.0, 0.0, 1.0, 0.0);
-    sine.write_to_file("sine_zero.ovm");
     EXPECT_NEAR(sine.compute_signed_volume(), rod.compute_signed_volume(), 1e-9);
 }
  
@@ -1575,25 +1535,6 @@ TEST(ParametricComplexSpiralTest, WrongParamCountAsserts) {
 // ParametricMeshGen tests
 // =============================================================================
   
-TEST(ParametricMeshGenTest, ParametricCurveMeshesExport) {
-
-    auto circle_mesh = ParametricMeshGen::generate_parametric_mesh(circle, {2.0},
-                                                              0.25, 1.0, //t range 
-                                                              40, 0.5); //length, thickness
-    circle_mesh.write_to_file("circle.ovm");
-
-    auto multi_branch_spiral_mesh = ParametricMeshGen::generate_parametric_mesh(multi_branch_spiral, {1.0, 3, 3.0, 0.0},
-                                                                                  0.0, 0.2, 
-                                                                                  200, 0.1);
-    multi_branch_spiral_mesh.write_to_file("multi_branch_spiral.ovm");
-
-    auto funny_spiral_mesh = ParametricMeshGen::generate_parametric_mesh(funny_spiral, {0.9, 0.7, 10.0, 1.0},
-                                                                                  0.0, 2.0, 
-                                                                                  200, 0.2);
-    funny_spiral_mesh.write_to_file("funny_spiral.ovm");
-
-}
-
 
 // Helper: compute the curve point for a given vertex index in a parametric mesh.
 // Mirrors the indexing logic in generate_parametric_mesh.
@@ -1777,3 +1718,150 @@ TEST(ParametricMeshGenTest, DifferentCurvesGiveDifferentVolumes) {
    
 
 }*/
+
+
+
+
+ 
+// -----------------------------------------------------------------------------
+// Export Tests
+// -----------------------------------------------------------------------------
+
+#ifndef REF_MESH_DIR
+#error "REF_MESH_DIR not found, export tests will fail. It should be defined in the CMakeLists so maybe you modified it?"
+#endif
+
+
+static void compare_against_reference(const std::string& filename) {
+    std::filesystem::path ref_path =
+        std::filesystem::path(REF_MESH_DIR) / ("ref_" + filename);
+
+    ASSERT_TRUE(std::filesystem::exists(ref_path))
+        << "Reference file missing: " << ref_path;
+
+    const std::string actual   = read_file(filename);
+    const std::string expected = read_file(ref_path);
+
+    ASSERT_FALSE(actual.empty())   << "Could not read output file: " << filename;
+    ASSERT_FALSE(expected.empty()) << "Could not read reference file: " << ref_path;
+
+    std::istringstream actual_stream(actual);
+    std::istringstream expected_stream(expected);
+    std::string actual_line, expected_line;
+    int line_number = 1;
+
+    while (std::getline(expected_stream, expected_line)) {
+        ASSERT_TRUE(std::getline(actual_stream, actual_line))
+            << "Output file is shorter than reference at line " << line_number;
+        ASSERT_EQ(actual_line, expected_line)
+            << "at line " << line_number;
+        ++line_number;
+    }
+
+    ASSERT_FALSE(std::getline(actual_stream, actual_line))
+        << "Output file is longer than reference, first extra line " 
+        << line_number << ": " << actual_line;
+}
+
+
+class MeshExportTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        if (HasFatalFailure()) return;
+        if(mesh_name_ == "") return;
+        
+        mesh_.write_to_file(mesh_name_);
+        compare_against_reference(mesh_name_);
+        std::filesystem::remove(mesh_name_);
+    }
+
+    TetMesh mesh_;
+    std::string mesh_name_;
+};
+
+
+TEST_F(MeshExportTest, KnottedHole) {
+    mesh_name_ = "knotted_hole.ovm";
+    mesh_ = VoxelGridMeshGen::generate_Furchs_knotted_hole();
+}
+
+
+TEST_F(MeshExportTest, MinimalNonStarShaped) {
+    auto codomain_mesh = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
+    codomain_mesh.write_to_file("min_non_star_shaped_codomain.ovm");
+    compare_against_reference("min_non_star_shaped_codomain.ovm");
+
+
+    auto domain_mesh = SimpleMeshGen::generate_minimal_non_star_shaped_domain_mesh();
+    domain_mesh.write_to_file("min_non_star_shaped_domain.ovm");
+    compare_against_reference("min_non_star_shaped_domain.ovm");
+    SUCCEED();
+}
+
+
+TEST_F(MeshExportTest, SineMesh) {
+    const int N(50);
+    //default mesh follows sin(x/N);
+    mesh_ = SimpleMeshGen::generate_sine_mesh(N, 5.0/N, M_PI/2.0, 2.0, 2.0);
+    mesh_name_ = "sine.ovm";
+}
+
+
+TEST_F(MeshExportTest, SpiralMesh) {
+    const int N(60);
+    mesh_ = SimpleMeshGen::generate_spiral_mesh(N, 2*M_PI, 10.0, 5.0);
+    mesh_name_ = "spiral.ovm";
+
+}
+
+
+TEST_F(MeshExportTest, TrefoilKnotMesh) {
+    const int N(100);
+    mesh_ = SimpleMeshGen::generate_trefoil_knot_mesh(N, 4*M_PI, 0.9);
+    //std::cout<<" ------------------------ t = "<<t_deg<<" / "<<t_rad<<std::endl;
+    mesh_name_ = "trefoil.ovm";
+}
+
+
+TEST_F(MeshExportTest, LayerMesh) {
+
+    const int M(7), N(13);
+    mesh_ = SimpleMeshGen::generate_layer_mesh(M, N);
+    mesh_name_ = "layer.ovm";
+}
+
+
+TEST_F(MeshExportTest, CircleMesh) {
+
+    mesh_ = ParametricMeshGen::generate_parametric_mesh(circle, {2.0},
+                                                              0.25, 1.0, //t range 
+                                                              40, 0.5); //length, thickness
+    mesh_name_ = "circle.ovm";
+}
+
+
+TEST_F(MeshExportTest, MultiBranchSpiral) {
+    mesh_ = ParametricMeshGen::generate_parametric_mesh(multi_branch_spiral, {1.0, 3, 3.0, 0.0},
+                                                                                  0.0, 0.2, 
+                                                                                  200, 0.1);
+    mesh_name_ = "multi_branch_spiral.ovm";
+}
+
+
+TEST_F(MeshExportTest, FunnySpiral) {
+    mesh_ = ParametricMeshGen::generate_parametric_mesh(funny_spiral, {0.9, 0.7, 10.0, 1.0},
+                                                                                  0.0, 2.0, 
+                                                                                  200, 0.2);
+    mesh_name_ = "funny_spiral.ovm";
+
+}
+
+
+
+TEST_F(MeshExportTest, ParametricTrefoilKnot) {
+    mesh_ = ParametricMeshGen::generate_parametric_mesh(trefoil_knot, {},
+                                                                                  0.0, 0.9, 
+                                                                                  100, 0.2);
+    mesh_name_ = "para_trefoil.ovm";
+
+}

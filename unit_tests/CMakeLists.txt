@@ -35,6 +35,11 @@ target_link_libraries(unit_tests
         GTest::gtest_main
 )
 
+set(REF_MESH_DIR "${CMAKE_SOURCE_DIR}/unit_tests/ref_meshes")
+target_compile_definitions(unit_tests PRIVATE
+    REF_MESH_DIR="${REF_MESH_DIR}"
+)
+
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
 

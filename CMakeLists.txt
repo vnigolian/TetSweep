@@ -47,6 +47,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 add_subdirectory(cli)
-add_subdirectory(unit-tests)
+add_subdirectory(unit_tests)
 
 

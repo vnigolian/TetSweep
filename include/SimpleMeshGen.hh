@@ -332,7 +332,7 @@ namespace tet_weave {
 
             // Helper: global handle for boundary vertex (i,j)
             auto vh = [&](int i, int j, int k) {
-                return VertexHandle(1 + k * ((u_steps+1) * (v_steps+1)) + i * (v_steps + 1) + j);
+                return VertexHandle(k * ((u_steps+1) * (v_steps+1)) + i * (v_steps + 1) + j + 1);
             };
 
             // Each quad cell → 2 tets via the interior vertex.
@@ -360,7 +360,7 @@ namespace tet_weave {
                     }
                 }
             }
-            std::cout<<" - layer mesh size step 1: "<<mesh.n_cells()<<std::endl;
+            //std::cout<<" - layer mesh size step 1: "<<mesh.n_cells()<<std::endl;
 
             for(int j: {0, v_steps}){
                 for(int i(0); i<u_steps; i++){
@@ -379,15 +379,20 @@ namespace tet_weave {
                     }
                 }
             }
-            std::cout<<" - layer mesh size step 2: "<<mesh.n_cells()<<std::endl;
+            //std::cout<<" - layer mesh size step 2: "<<mesh.n_cells()<<std::endl;
 
             for(int i: {0, u_steps}){
-                for(int j(0); j<u_steps; j++){
+                    //std::cout<<" ------- adding cells on side "<<i<<std::endl;
+                for(int j(0); j<v_steps; j++){
+
+                    //std::cout<<" ------ j = "<<j<<std::endl;
 
                     auto v00 = vh(i, j,   0);
                     auto v10 = vh(i, j+1, 0);
                     auto v01 = vh(i, j,   1);
                     auto v11 = vh(i, j+1, 1);
+
+                    //std::cout<<" - indices: {"<<v00<<", "<<v10<<", "<<v01<<","<<v11<<"}"<<std::endl;
 
                     if(i){
                         mesh.add_cell({vi, v00, v10, v11});
@@ -398,7 +403,7 @@ namespace tet_weave {
                     }
                 }
             }
-            std::cout<<" - layer mesh size step 3: "<<mesh.n_cells()<<std::endl;
+            //std::cout<<" - layer mesh size step 3: "<<mesh.n_cells()<<std::endl;
 
             return mesh;
         }
