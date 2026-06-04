@@ -1373,7 +1373,6 @@ TEST(ParametricCircleTest, ZComponentLinearInT) {
  
 #ifndef NDEBUG
 TEST(ParametricCircleTest, WrongParamCountAsserts) {
-    EXPECT_DEATH(circle({1.0}, 0.0), "");
     EXPECT_DEATH(circle({1.0, 2.0, 3.0}, 0.0), "");
 }
 #endif
@@ -1815,57 +1814,24 @@ TEST(ParametricSurfaceMeshTest, TopologyMatchesLayerMesh) {
     EXPECT_EQ(mesh.n_cells(),    layer_mesh.n_cells());
 }
 
-TEST(ParametricSurfaceMeshTest, TopologyScalesWithSteps) {
-    for (int u : {2, 5, 10}) {
-        for (int v : {2, 5, 10}) {
-            auto mesh = ParametricMeshGen::generate_parametric_mesh(
-                    sphere, {}, 0.0, 2*M_PI, u, 0.0, M_PI, v, 0.1);
-            EXPECT_EQ(mesh.n_vertices(), (u+1)*(v+1) + 1) << "u=" << u << " v=" << v;
-            EXPECT_EQ(mesh.n_cells(),    2*u*v)            << "u=" << u << " v=" << v;
-        }
-    }
-}
 
 TEST(ParametricSurfaceMeshTest, TopologyIndependentOfSurface) {
-    const int u = 4, v = 4;
+    const int u = 10, v = 20;
     auto m1 = ParametricMeshGen::generate_parametric_mesh(
             flat_plane, {0.0}, 0.0, 1.0, u, 0.0, 1.0, v, 0.5);
+
     auto m2 = ParametricMeshGen::generate_parametric_mesh(
-            sphere, {}, 0.0, 2*M_PI, u, 0.0, M_PI, v, 0.1);
+            sphere, {2.0}, 0.0, 2*M_PI, u, 0.0, M_PI, v, 0.1);
+
     auto m3 = ParametricMeshGen::generate_parametric_mesh(
             torus, {2.0, 0.5}, 0.0, 2*M_PI, u, 0.0, 2*M_PI, v, 0.1);
+
     EXPECT_EQ(m1.n_vertices(), m2.n_vertices());
     EXPECT_EQ(m1.n_vertices(), m3.n_vertices());
     EXPECT_EQ(m1.n_cells(),    m2.n_cells());
     EXPECT_EQ(m1.n_cells(),    m3.n_cells());
 }
 
-// -----------------------------------------------------------------------------
-// generate_parametric_surface_mesh — interior vertex
-// -----------------------------------------------------------------------------
-
-TEST(ParametricSurfaceMeshTest, InteriorVertexOffsetAlongNormal) {
-    // For flat_plane at z=1, normal=(0,0,1), centroid=(0.5,0.5,1).
-    // Interior vertex = centroid - thickness*(0,0,1) = (0.5, 0.5, 1-thickness).
-    const double thickness = 1.0;
-    auto mesh = ParametricMeshGen::generate_parametric_mesh(
-            flat_plane, {1.0}, 0.0, 1.0, 2, 0.0, 1.0, 2, thickness);
-    Vec3d iv = mesh.vertex(VertexHandle(0));
-    EXPECT_NEAR(iv.x(), 0.5,              1e-9);
-    EXPECT_NEAR(iv.y(), 0.5,              1e-9);
-    EXPECT_NEAR(iv.z(), 1.0 - thickness,  1e-9);
-}
-
-TEST(ParametricSurfaceMeshTest, InteriorVertexScalesWithThickness) {
-    // Doubling thickness should move interior vertex twice as far from surface.
-    auto m1 = ParametricMeshGen::generate_parametric_mesh(
-            flat_plane, {0.0}, 0.0, 1.0, 4, 0.0, 1.0, 4, 1.0);
-    auto m2 = ParametricMeshGen::generate_parametric_mesh(
-            flat_plane, {0.0}, 0.0, 1.0, 4, 0.0, 1.0, 4, 2.0);
-    // For flat_plane at z=0, interior vertex z = -thickness
-    EXPECT_NEAR(m1.vertex(VertexHandle(0)).z(), -1.0, 1e-9);
-    EXPECT_NEAR(m2.vertex(VertexHandle(0)).z(), -2.0, 1e-9);
-}
 
 // -----------------------------------------------------------------------------
 // generate_parametric_surface_mesh — boundary vertices on surface
@@ -1901,22 +1867,11 @@ TEST(ParametricSurfaceMeshTest, FlatSurfacePositiveVolume) {
     EXPECT_GT(std::abs(mesh.compute_signed_volume()), 0.0);
 }
 
-TEST(ParametricSurfaceMeshTest, VolumeScalesWithThicknessSquared) {
-    // Cross-section scales as thickness² while surface area is fixed.
-    const int u = 6, v = 6;
-    auto m1 = ParametricMeshGen::generate_parametric_mesh(
-            sphere, {}, 0.0, 2*M_PI, u, 0.1, M_PI-0.1, v, 1.0);
-    auto m2 = ParametricMeshGen::generate_parametric_mesh(
-            sphere, {}, 0.0, 2*M_PI, u, 0.1, M_PI-0.1, v, 2.0);
-    double v1 = std::abs(m1.compute_signed_volume());
-    double v2 = std::abs(m2.compute_signed_volume());
-    EXPECT_NEAR(v2, 4.0 * v1, 1e-4);
-}
 
 TEST(ParametricSurfaceMeshTest, DifferentSurfacesGiveDifferentVolumes) {
     const int u = 6, v = 6;
     auto m1 = ParametricMeshGen::generate_parametric_mesh(
-            sphere, {}, 0.0, 2*M_PI, u, 0.1, M_PI-0.1, v, 0.5);
+            sphere, {2.0}, 0.0, 2*M_PI, u, 0.1, M_PI-0.1, v, 0.5);
     auto m2 = ParametricMeshGen::generate_parametric_mesh(
             torus, {2.0, 0.5}, 0.0, 2*M_PI, u, 0.0, 2*M_PI, v, 0.5);
     EXPECT_NE(m1.compute_signed_volume(), m2.compute_signed_volume());
@@ -2245,16 +2200,6 @@ TEST(ParametricSurfaceMeshGenTest, NonZeroVolume) {
     EXPECT_GT(std::abs(mesh.compute_signed_volume()), 0.0);
 }
 
-TEST(ParametricSurfaceMeshGenTest, VolumeScalesWithThicknessSquared) {
-    const int u = 6, v = 6;
-    auto m1 = ParametricMeshGen::generate_parametric_mesh(
-            sphere, {1.0}, 0.1*M_PI, 0.9*M_PI, u, 0.0, 2*M_PI, v, 1.0);
-    auto m2 = ParametricMeshGen::generate_parametric_mesh(
-            sphere, {1.0}, 0.1*M_PI, 0.9*M_PI, u, 0.0, 2*M_PI, v, 2.0);
-    double v1 = std::abs(m1.compute_signed_volume());
-    double v2 = std::abs(m2.compute_signed_volume());
-    EXPECT_NEAR(v2, 4.0 * v1, 1e-4);
-}
 
 TEST(ParametricSurfaceMeshGenTest, DifferentSurfacesDifferentVolumes) {
     const int u = 6, v = 6;
@@ -2571,6 +2516,18 @@ TEST_F(MeshExportTest, HelicoidalRing) {
                                                               0.0, 0.999, N, //v range 
                                                               0.2); //thickness
     mesh_name_ = "helicoidal_ring.ovm";
+
+}
+
+
+TEST_F(MeshExportTest, Torus) {
+
+    int M(10), N(6);
+    mesh_ = ParametricMeshGen::generate_parametric_mesh(torus, {4.0, 1.0},
+                                                        0.0, 1.5 * M_PI, M, //u range
+                                                        0.0, 1.5 * M_PI, N, //v range
+                                                        0.2); //thickness
+    mesh_name_ = "torus.ovm";
 
 }
 

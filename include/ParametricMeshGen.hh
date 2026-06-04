@@ -131,27 +131,23 @@ namespace tet_weave {
 
                     auto x = surface(surface_params, u, v);
 
-
                     Vec3d dSdu = (surface(surface_params, u + eps, v) - surface(surface_params, u - eps, v)) * (0.5 / eps);
                     Vec3d dSdv = (surface(surface_params, u, v + eps) - surface(surface_params, u, v - eps)) * (0.5 / eps);
 
-
-                    Vec3d n = dSdu.cross(dSdv).normalized();
+                    Vec3d n = dSdu.cross(dSdv);
+                    if(n.norm() != 0) n.normalize();
 
                     mesh.set_vertex(vh_b, x - 0.5 * thickness * n);
                     mesh.set_vertex(vh_t, x + 0.5 * thickness * n);
 
                     centroid += mesh.vertex(vh_b);
                     centroid += mesh.vertex(vh_t);
-
                 }
             }
 
             centroid /= (2 * (u_steps +1) * (v_steps + 1));
 
-
             mesh.set_vertex(VertexHandle(0), centroid);
-
 
             return mesh;
         }

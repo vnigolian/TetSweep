@@ -16,12 +16,19 @@ namespace tet_weave{
 
 
     Vec3d circle(const std::vector<double>& params, double t){
-        assert(params.size() == 2 && "parametric circle takes exactly 2 argument");
+        assert(params.size() <= 2 && "parametric circle takes at most 2 arguments (radius and z-max)");
 
-        double radius = params[0];
-        double z_scale = params[1];
+        double radius = 1.0;
+        double z_max = 0.0;
 
-        return params[0] * Vec3d(std::cos(t), std::sin(t), z_scale * t);
+        if(params.size() >= 1) {
+            radius = params[0];
+        }
+        if(params.size() >= 2) {
+            z_max = params[1];
+        }
+
+        return radius * Vec3d(std::cos(t), std::sin(t), z_max * t);
     }
 
 

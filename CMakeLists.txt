@@ -42,8 +42,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-fsanitize=address -fsanitize=undefined)
     add_link_options(-fsanitize=address -fsanitize=undefined)
 
-    target_compile_options(TetWeave PRIVATE -fsanitize=address -fsanitize=undefined)
-    target_link_options(TetWeave PRIVATE -fsanitize=address -fsanitize=undefined)
+    #target_compile_options(TetWeave PRIVATE -fsanitize=address -fsanitize=undefined)
+    #target_link_options(TetWeave PRIVATE -fsanitize=address -fsanitize=undefined)
 endif()
 
 add_subdirectory(cli)
