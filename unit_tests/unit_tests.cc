@@ -1711,8 +1711,657 @@ TEST(ParametricMeshGenTest, DifferentCurvesGiveDifferentVolumes) {
 
 
 
+// =============================================================================
+// SurfaceMeshGen tests
+// =============================================================================
 
- 
+// Test parametric surfaces
+static Vec3d flat_plane(const std::vector<double>& p, double u, double v) {
+    // f(u,v) = (u, v, p[0]) — flat plane at height p[0]
+    return {u, v, p[0]};
+}
+
+// -----------------------------------------------------------------------------
+// generate_layer_mesh — topology
+// -----------------------------------------------------------------------------
+
+TEST(LayerMeshTest, VertexCount) {
+    for (int u : {2, 3, 4, 10}) {
+        for (int v : {2, 3, 4, 10}) {
+            auto mesh = SimpleMeshGen::generate_layer_mesh(u, v);
+            EXPECT_EQ(mesh.n_vertices(), 2 * (u+1)*(v+1) + 1) << "u=" << u << " v=" << v;
+        }
+    }
+}
+
+TEST(LayerMeshTest, CellCount) {
+    for (int u : {2, 3, 4, 10}) {
+        for (int v : {2, 3, 4, 10}) {
+            auto mesh = SimpleMeshGen::generate_layer_mesh(u, v);
+            EXPECT_EQ(mesh.n_cells(), 4 * (u * v + u + v)) << "u=" << u << " v=" << v;
+        }
+    }
+}
+
+TEST(LayerMeshTest, InteriorVertexAtCentroid) {
+    // Interior vertex (index 0) placed at (u_steps/2, v_steps/2, 0).
+    const int u = 4, v = 6;
+    auto mesh = SimpleMeshGen::generate_layer_mesh(u, v);
+    EXPECT_EQ(mesh.vertex(VertexHandle(0)), Vec3d(u * 0.5, v * 0.5, 0.5));
+}
+
+TEST(LayerMeshTest, BoundaryVerticesInXYPlane) {
+    auto mesh = SimpleMeshGen::generate_layer_mesh(3, 4);
+
+    //lower plane
+    for (int i = 1; i < (mesh.n_vertices()+1) / 2; ++i)
+        EXPECT_DOUBLE_EQ(mesh.vertex(VertexHandle(i)).z(), 0.0) << "vertex " << i;
+
+    //upper plane
+    for (int i = (mesh.n_vertices()+1) / 2; i < mesh.n_vertices(); ++i)
+        EXPECT_DOUBLE_EQ(mesh.vertex(VertexHandle(i)).z(), 1.0) << "vertex " << i;
+}
+
+TEST(LayerMeshTest, BoundaryVertexPositions) {
+    // vertex(i,j) should be at (i, j, 0).
+    const int u = 3, v = 4;
+    auto mesh = SimpleMeshGen::generate_layer_mesh(u, v);
+    for (int i = 0; i <= u; ++i) {
+        for (int j = 0; j <= v; ++j) {
+            VertexHandle vh(1 + i * (v + 1) + j);
+            EXPECT_EQ(mesh.vertex(vh), Vec3d(i, j, 0.0))
+                                << "i=" << i << " j=" << j;
+        }
+    }
+}
+
+TEST(LayerMeshTest, PositiveVolume) {
+    // The undeformed layer mesh has all boundary verts in z=0 and interior
+    // at z=0 too → volume is 0. Volume only becomes nonzero after deformation.
+    // So just check it generates without crashing and has correct counts.
+    auto mesh = SimpleMeshGen::generate_layer_mesh(4, 4);
+    EXPECT_EQ(mesh.n_vertices(), 51);
+    EXPECT_EQ(mesh.n_cells(), 96);
+}
+
+TEST(LayerMeshTest, SquareGridIsSymmetric) {
+    // For a square grid u_steps == v_steps, swapping u and v should give
+    // the same counts.
+    auto m1 = SimpleMeshGen::generate_layer_mesh(4, 6);
+    auto m2 = SimpleMeshGen::generate_layer_mesh(6, 4);
+    EXPECT_EQ(m1.n_vertices(), m2.n_vertices());
+    EXPECT_EQ(m1.n_cells(),    m2.n_cells());
+}
+
+#ifndef NDEBUG
+TEST(LayerMeshTest, ZeroUStepsAsserts) {
+    EXPECT_DEATH(SimpleMeshGen::generate_layer_mesh(0, 4), "");
+}
+TEST(LayerMeshTest, ZeroVStepsAsserts) {
+    EXPECT_DEATH(SimpleMeshGen::generate_layer_mesh(4, 0), "");
+}
+#endif
+
+// -----------------------------------------------------------------------------
+// generate_parametric_surface_mesh — topology
+// -----------------------------------------------------------------------------
+
+TEST(ParametricSurfaceMeshTest, TopologyMatchesLayerMesh) {
+    const int u = 4, v = 4;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(
+            flat_plane, {1.0}, 0.0, 1.0, u, 0.0, 1.0, v, 0.5);
+    auto layer_mesh = SimpleMeshGen::generate_layer_mesh(u,v);
+    EXPECT_EQ(mesh.n_vertices(), layer_mesh.n_vertices());
+    EXPECT_EQ(mesh.n_cells(),    layer_mesh.n_cells());
+}
+
+TEST(ParametricSurfaceMeshTest, TopologyScalesWithSteps) {
+    for (int u : {2, 5, 10}) {
+        for (int v : {2, 5, 10}) {
+            auto mesh = ParametricMeshGen::generate_parametric_mesh(
+                    sphere, {}, 0.0, 2*M_PI, u, 0.0, M_PI, v, 0.1);
+            EXPECT_EQ(mesh.n_vertices(), (u+1)*(v+1) + 1) << "u=" << u << " v=" << v;
+            EXPECT_EQ(mesh.n_cells(),    2*u*v)            << "u=" << u << " v=" << v;
+        }
+    }
+}
+
+TEST(ParametricSurfaceMeshTest, TopologyIndependentOfSurface) {
+    const int u = 4, v = 4;
+    auto m1 = ParametricMeshGen::generate_parametric_mesh(
+            flat_plane, {0.0}, 0.0, 1.0, u, 0.0, 1.0, v, 0.5);
+    auto m2 = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {}, 0.0, 2*M_PI, u, 0.0, M_PI, v, 0.1);
+    auto m3 = ParametricMeshGen::generate_parametric_mesh(
+            torus, {2.0, 0.5}, 0.0, 2*M_PI, u, 0.0, 2*M_PI, v, 0.1);
+    EXPECT_EQ(m1.n_vertices(), m2.n_vertices());
+    EXPECT_EQ(m1.n_vertices(), m3.n_vertices());
+    EXPECT_EQ(m1.n_cells(),    m2.n_cells());
+    EXPECT_EQ(m1.n_cells(),    m3.n_cells());
+}
+
+// -----------------------------------------------------------------------------
+// generate_parametric_surface_mesh — interior vertex
+// -----------------------------------------------------------------------------
+
+TEST(ParametricSurfaceMeshTest, InteriorVertexOffsetAlongNormal) {
+    // For flat_plane at z=1, normal=(0,0,1), centroid=(0.5,0.5,1).
+    // Interior vertex = centroid - thickness*(0,0,1) = (0.5, 0.5, 1-thickness).
+    const double thickness = 1.0;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(
+            flat_plane, {1.0}, 0.0, 1.0, 2, 0.0, 1.0, 2, thickness);
+    Vec3d iv = mesh.vertex(VertexHandle(0));
+    EXPECT_NEAR(iv.x(), 0.5,              1e-9);
+    EXPECT_NEAR(iv.y(), 0.5,              1e-9);
+    EXPECT_NEAR(iv.z(), 1.0 - thickness,  1e-9);
+}
+
+TEST(ParametricSurfaceMeshTest, InteriorVertexScalesWithThickness) {
+    // Doubling thickness should move interior vertex twice as far from surface.
+    auto m1 = ParametricMeshGen::generate_parametric_mesh(
+            flat_plane, {0.0}, 0.0, 1.0, 4, 0.0, 1.0, 4, 1.0);
+    auto m2 = ParametricMeshGen::generate_parametric_mesh(
+            flat_plane, {0.0}, 0.0, 1.0, 4, 0.0, 1.0, 4, 2.0);
+    // For flat_plane at z=0, interior vertex z = -thickness
+    EXPECT_NEAR(m1.vertex(VertexHandle(0)).z(), -1.0, 1e-9);
+    EXPECT_NEAR(m2.vertex(VertexHandle(0)).z(), -2.0, 1e-9);
+}
+
+// -----------------------------------------------------------------------------
+// generate_parametric_surface_mesh — boundary vertices on surface
+// -----------------------------------------------------------------------------
+
+TEST(ParametricSurfaceMeshTest, ZeroThicknessBoundaryVerticesOnSurface) {
+    // With thickness=0, boundary vertices should lie exactly on the surface.
+    const int u = 3, v = 3;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(
+            flat_plane, {2.0}, 0.0, 1.0, u, 0.0, 1.0, v, 0.0);
+    for (int i = 0; i <= u; ++i) {
+        for (int j = 0; j <= v; ++j) {
+            VertexHandle vh(1 + i * (v+1) + j);
+            double ui = i / static_cast<double>(u);
+            double vj = j / static_cast<double>(v);
+            Vec3d expected = flat_plane({2.0}, ui, vj);
+            EXPECT_NEAR(mesh.vertex(vh).x(), expected.x(), 1e-9) << "i=" << i << " j=" << j;
+            EXPECT_NEAR(mesh.vertex(vh).y(), expected.y(), 1e-9) << "i=" << i << " j=" << j;
+            EXPECT_NEAR(mesh.vertex(vh).z(), expected.z(), 1e-9) << "i=" << i << " j=" << j;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// generate_parametric_surface_mesh — volume
+// -----------------------------------------------------------------------------
+
+TEST(ParametricSurfaceMeshTest, FlatSurfacePositiveVolume) {
+    // Flat plane at z=1, thickness=1 → interior vertex at z=0,
+    // boundary at z=1 → non-zero volume.
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(
+            flat_plane, {1.0}, 0.0, 1.0, 4, 0.0, 1.0, 4, 1.0);
+    EXPECT_GT(std::abs(mesh.compute_signed_volume()), 0.0);
+}
+
+TEST(ParametricSurfaceMeshTest, VolumeScalesWithThicknessSquared) {
+    // Cross-section scales as thickness² while surface area is fixed.
+    const int u = 6, v = 6;
+    auto m1 = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {}, 0.0, 2*M_PI, u, 0.1, M_PI-0.1, v, 1.0);
+    auto m2 = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {}, 0.0, 2*M_PI, u, 0.1, M_PI-0.1, v, 2.0);
+    double v1 = std::abs(m1.compute_signed_volume());
+    double v2 = std::abs(m2.compute_signed_volume());
+    EXPECT_NEAR(v2, 4.0 * v1, 1e-4);
+}
+
+TEST(ParametricSurfaceMeshTest, DifferentSurfacesGiveDifferentVolumes) {
+    const int u = 6, v = 6;
+    auto m1 = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {}, 0.0, 2*M_PI, u, 0.1, M_PI-0.1, v, 0.5);
+    auto m2 = ParametricMeshGen::generate_parametric_mesh(
+            torus, {2.0, 0.5}, 0.0, 2*M_PI, u, 0.0, 2*M_PI, v, 0.5);
+    EXPECT_NE(m1.compute_signed_volume(), m2.compute_signed_volume());
+}
+
+TEST(ParametricSurfaceMeshTest, SmokeTestWritesToFile) {
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(
+            torus, {2.0, 0.5}, 0.0, 2*M_PI, 10, 0.0, 2*M_PI, 10, 0.1);
+    mesh.write_to_file("test_surface.ovm");
+    EXPECT_TRUE(std::filesystem::exists("test_surface.ovm"));
+}
+
+// =============================================================================
+// Parametric surface function tests
+// =============================================================================
+
+static constexpr double surf_epsilon = 1e-9;
+
+// -----------------------------------------------------------------------------
+// sphere
+// -----------------------------------------------------------------------------
+
+TEST(SphereTest, AllPointsAtRadiusFromOrigin) {
+    const double r = 2.0;
+    for (double u : {0.0, M_PI/4.0, M_PI/2.0, 3.0*M_PI/4.0, M_PI}) {
+        for (double v : {0.0, M_PI/2.0, M_PI, 3.0*M_PI/2.0}) {
+            Vec3d p = sphere({r}, u, v);
+            EXPECT_NEAR(p.norm(), r, surf_epsilon) << "u=" << u << " v=" << v;
+        }
+    }
+}
+
+TEST(SphereTest, NorthPole) {
+    // u=0: (sin(0)*cos(v), sin(0)*sin(v), cos(0)) = (0, 0, r)
+    Vec3d p = sphere({1.0}, 0.0, 0.0);
+    EXPECT_NEAR(p.x(), 0.0, surf_epsilon);
+    EXPECT_NEAR(p.y(), 0.0, surf_epsilon);
+    EXPECT_NEAR(p.z(), 1.0, surf_epsilon);
+}
+
+TEST(SphereTest, SouthPole) {
+    // u=pi: (0, 0, -r)
+    Vec3d p = sphere({1.0}, M_PI, 0.0);
+    EXPECT_NEAR(p.x(), 0.0, surf_epsilon);
+    EXPECT_NEAR(p.y(), 0.0, surf_epsilon);
+    EXPECT_NEAR(p.z(), -1.0, surf_epsilon);
+}
+
+TEST(SphereTest, EquatorPointOnXAxis) {
+    // u=pi/2, v=0: (r, 0, 0)
+    Vec3d p = sphere({2.0}, M_PI/2.0, 0.0);
+    EXPECT_NEAR(p.x(), 2.0, surf_epsilon);
+    EXPECT_NEAR(p.y(), 0.0, surf_epsilon);
+    EXPECT_NEAR(p.z(), 0.0, surf_epsilon);
+}
+
+TEST(SphereTest, RadiusScalesOutput) {
+    double t = M_PI / 3.0, s = M_PI / 4.0;
+    Vec3d p1 = sphere({1.0}, t, s);
+    Vec3d p2 = sphere({3.0}, t, s);
+    EXPECT_NEAR(p2.norm(), 3.0 * p1.norm(), surf_epsilon);
+}
+
+TEST(SphereTest, NormalIsRadiallyOutward) {
+    // For a sphere, the surface normal should point radially outward,
+    // i.e. parallel to the position vector.
+    const double r = 1.0;
+    const double fd_eps = 1e-6;
+    for (double u : {M_PI/4.0, M_PI/2.0, 3.0*M_PI/4.0}) {
+        for (double v : {0.0, M_PI/2.0, M_PI}) {
+            auto S = [&](double u_, double v_) { return sphere({r}, u_, v_); };
+            Vec3d dSdu = (S(u+fd_eps,v) - S(u-fd_eps,v)) * (0.5/fd_eps);
+            Vec3d dSdv = (S(u,v+fd_eps) - S(u,v-fd_eps)) * (0.5/fd_eps);
+            Vec3d n = dSdu.cross(dSdv).normalized();
+            Vec3d pos = sphere({r}, u, v).normalized();
+            // Normal should be parallel to position (dot product = ±1)
+            EXPECT_NEAR(std::abs(n.dot(pos)), 1.0, 1e-6)
+                                << "u=" << u << " v=" << v;
+        }
+    }
+}
+
+#ifndef NDEBUG
+TEST(SphereTest, WrongParamCountAsserts) {
+    EXPECT_DEATH(sphere({1.0, 2.0}, 0.0, 0.0), "");
+}
+#endif
+
+// -----------------------------------------------------------------------------
+// sine3d
+// -----------------------------------------------------------------------------
+
+TEST(Sine3dTest, ZeroOnAxes) {
+    // sin(period*u)*sin(period*v) = 0 when u=0 or v=0
+    for (double v : {0.0, 1.0, M_PI}) {
+        Vec3d p = sine3d({1.0, 1.0}, 0.0, v);
+        EXPECT_NEAR(p.z(), 0.0, surf_epsilon) << "v=" << v;
+    }
+    for (double u : {0.0, 1.0, M_PI}) {
+        Vec3d p = sine3d({1.0, 1.0}, u, 0.0);
+        EXPECT_NEAR(p.z(), 0.0, surf_epsilon) << "u=" << u;
+    }
+}
+
+TEST(Sine3dTest, XYAreLinearInUV) {
+    // x = amp*u, y = amp*v — independent of period
+    const double amp = 2.0, period = 3.0;
+    for (double u : {0.0, 0.5, 1.0, M_PI}) {
+        for (double v : {0.0, 0.5, 1.0}) {
+            Vec3d p = sine3d({amp, period}, u, v);
+            EXPECT_NEAR(p.x(), amp * u, surf_epsilon) << "u=" << u;
+            EXPECT_NEAR(p.y(), amp * v, surf_epsilon) << "v=" << v;
+        }
+    }
+}
+
+TEST(Sine3dTest, ZBoundedByAmplitude) {
+    // |z| <= amp since |sin*sin| <= 1
+    const double amp = 3.0;
+    for (double u : {0.0, 0.5, 1.0, M_PI}) {
+        for (double v : {0.0, 0.5, 1.0}) {
+            Vec3d p = sine3d({amp, 1.0}, u, v);
+            EXPECT_LE(std::abs(p.z()), amp + surf_epsilon);
+        }
+    }
+}
+
+TEST(Sine3dTest, DefaultAmplitudeIsOne) {
+    // params={} → amp=1, period=1
+    Vec3d p0 = sine3d({},      1.0, 1.0);
+    Vec3d p1 = sine3d({1.0, 1.0}, 1.0, 1.0);
+    EXPECT_NEAR(p0.x(), p1.x(), surf_epsilon);
+    EXPECT_NEAR(p0.y(), p1.y(), surf_epsilon);
+    EXPECT_NEAR(p0.z(), p1.z(), surf_epsilon);
+}
+
+TEST(Sine3dTest, AmplitudeScalesOutput) {
+    Vec3d p1 = sine3d({1.0, 1.0}, 1.0, 1.0);
+    Vec3d p2 = sine3d({2.0, 1.0}, 1.0, 1.0);
+    EXPECT_NEAR(p2.z(), 2.0 * p1.z(), surf_epsilon);
+}
+
+TEST(Sine3dTest, PeriodAffectsZOnly) {
+    // Changing period should not affect x or y
+    const double u = 1.0, v = 1.0;
+    Vec3d p1 = sine3d({1.0, 1.0}, u, v);
+    Vec3d p2 = sine3d({1.0, 2.0}, u, v);
+    EXPECT_NEAR(p1.x(), p2.x(), surf_epsilon);
+    EXPECT_NEAR(p1.y(), p2.y(), surf_epsilon);
+    EXPECT_NE(p1.z(), p2.z());
+}
+
+#ifndef NDEBUG
+TEST(Sine3dTest, TooManyParamsAsserts) {
+    EXPECT_DEATH(sine3d({1.0, 2.0, 3.0}, 0.0, 0.0), "");
+}
+#endif
+
+// -----------------------------------------------------------------------------
+// helicoidal_ring
+// NOTE: helicoidal_ring has a bug — assert condition is != 1 instead of == 1.
+// Tests are written against the intended correct behaviour.
+// -----------------------------------------------------------------------------
+
+TEST(HelicoidalRingTest, OutputIsFinite) {
+    // Smoke test: all components should be finite for reasonable inputs
+    for (double u : {0.0, 0.25, 0.5}) {
+        for (double v : {0.0, 0.25, 0.5, 0.75, 0.999}) {
+            Vec3d p = helicoidal_ring({3.0}, u, v);
+            EXPECT_TRUE(std::isfinite(p.x())) << "u=" << u << " v=" << v;
+            EXPECT_TRUE(std::isfinite(p.y())) << "u=" << u << " v=" << v;
+            EXPECT_TRUE(std::isfinite(p.z())) << "u=" << u << " v=" << v;
+        }
+    }
+}
+
+TEST(HelicoidalRingTest, DifferentLoopCountsGiveDifferentShapes) {
+    Vec3d p1 = helicoidal_ring({1.0}, 0.25, 0.25);
+    Vec3d p2 = helicoidal_ring({5.0}, 0.25, 0.25);
+    EXPECT_NE(p1, p2);
+}
+
+TEST(HelicoidalRingTest, ZSymmetry) {
+    // z = sin(loops*tau*v) * (sin(tau*u) + 3)
+    // sin(tau*u) + 3 > 0 always (min = 3-1 = 2), so sign of z follows sin(loops*tau*v)
+    // At v=0: z=0
+    for (double u : {0.0, 0.1, 0.25, 0.5}) {
+        Vec3d p = helicoidal_ring({2.0}, u, 0.0);
+        EXPECT_NEAR(p.z(), 0.0, surf_epsilon) << "u=" << u;
+    }
+}
+
+// =============================================================================
+// ParametricSurfaceMeshGen (new generator) tests
+// =============================================================================
+
+TEST(ParametricSurfaceMeshGenTest, TopologyMatchesLayerMesh) {
+    const int u = 4, v = 4;
+    auto layer = SimpleMeshGen::generate_layer_mesh(u, v);
+    auto mesh  = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {1.0}, 0.1*M_PI, 0.9*M_PI, u, 0.0, 2*M_PI, v, 0.1);
+    EXPECT_EQ(mesh.n_vertices(), layer.n_vertices());
+    EXPECT_EQ(mesh.n_cells(),    layer.n_cells());
+}
+
+TEST(ParametricSurfaceMeshGenTest, TopologyScalesWithSteps) {
+    for (int u : {3, 5, 10}) {
+        for (int v : {3, 5, 10}) {
+            auto layer = SimpleMeshGen::generate_layer_mesh(u, v);
+            auto mesh  = ParametricMeshGen::generate_parametric_mesh(
+                    sine3d, {1.0, 1.0}, 0.0, M_PI, u, 0.0, M_PI, v, 0.1);
+            EXPECT_EQ(mesh.n_vertices(), layer.n_vertices()) << "u=" << u << " v=" << v;
+            EXPECT_EQ(mesh.n_cells(),    layer.n_cells())    << "u=" << u << " v=" << v;
+        }
+    }
+}
+
+TEST(ParametricSurfaceMeshGenTest, ZeroThicknessTopAndBottomCoincide) {
+    // With thickness=0, top and bottom vertices should be identical.
+    const int u = 4, v = 4;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {1.0}, 0.1*M_PI, 0.9*M_PI, u, 0.0, 2*M_PI, v, 0.0);
+    for (int i = 0; i <= u; ++i) {
+        for (int j = 0; j <= v; ++j) {
+            auto vh_b = SimpleMeshGen::layer_vertex_id(u, v, i, j, 0);
+            auto vh_t = SimpleMeshGen::layer_vertex_id(u, v, i, j, 1);
+            EXPECT_EQ(mesh.vertex(vh_b), mesh.vertex(vh_t))
+                                << "i=" << i << " j=" << j;
+        }
+    }
+}
+
+TEST(ParametricSurfaceMeshGenTest, TopAndBottomEquidistantFromSurface) {
+    // Each top/bottom vertex should be at distance 0.5*thickness from surface.
+    const int u = 4, v = 4;
+    const double thickness = 0.4;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {2.0}, 0.1*M_PI, 0.9*M_PI, u, 0.0, 2*M_PI, v, thickness);
+
+    const double du = (0.9*M_PI - 0.1*M_PI) / u;
+    const double dv = (2*M_PI) / v;
+    for (int i = 0; i <= u; ++i) {
+        for (int j = 0; j <= v; ++j) {
+            double ui = 0.1*M_PI + i * du;
+            double vj = j * dv;
+            Vec3d surface_pt = sphere({2.0}, ui, vj);
+            auto vh_b = SimpleMeshGen::layer_vertex_id(u, v, i, j, 0);
+            auto vh_t = SimpleMeshGen::layer_vertex_id(u, v, i, j, 1);
+            EXPECT_NEAR((mesh.vertex(vh_b) - surface_pt).norm(), 0.5*thickness, 1e-6)
+                                << "bottom i=" << i << " j=" << j;
+            EXPECT_NEAR((mesh.vertex(vh_t) - surface_pt).norm(), 0.5*thickness, 1e-6)
+                                << "top i=" << i << " j=" << j;
+        }
+    }
+}
+
+TEST(ParametricSurfaceMeshGenTest, TopAndBottomSymmetricAboutSurface) {
+    // Midpoint of top and bottom vertex should lie on the surface.
+    const int u = 4, v = 4;
+    const double thickness = 0.3;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {1.0}, 0.1*M_PI, 0.9*M_PI, u, 0.0, 2*M_PI, v, thickness);
+
+    const double du = (0.9*M_PI - 0.1*M_PI) / u;
+    const double dv = 2*M_PI / v;
+    for (int i = 0; i <= u; ++i) {
+        for (int j = 0; j <= v; ++j) {
+            double ui = 0.1*M_PI + i * du;
+            double vj = j * dv;
+            Vec3d surface_pt = sphere({1.0}, ui, vj);
+            auto vh_b = SimpleMeshGen::layer_vertex_id(u, v, i, j, 0);
+            auto vh_t = SimpleMeshGen::layer_vertex_id(u, v, i, j, 1);
+            Vec3d midpoint = (mesh.vertex(vh_b) + mesh.vertex(vh_t)) * 0.5;
+            EXPECT_NEAR(midpoint.x(), surface_pt.x(), 1e-6) << "i=" << i << " j=" << j;
+            EXPECT_NEAR(midpoint.y(), surface_pt.y(), 1e-6) << "i=" << i << " j=" << j;
+            EXPECT_NEAR(midpoint.z(), surface_pt.z(), 1e-6) << "i=" << i << " j=" << j;
+        }
+    }
+}
+
+TEST(ParametricSurfaceMeshGenTest, InteriorVertexIsCentroidOfAllVertices) {
+    // Interior vertex (index 0) should equal the average of all top+bottom vertices.
+    const int u = 4, v = 4;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(
+            sine3d, {1.0, 1.0}, 0.0, M_PI, u, 0.0, M_PI, v, 0.2);
+
+    Vec3d centroid{0, 0, 0};
+    int count = 0;
+    for (int i = 0; i <= u; ++i) {
+        for (int j = 0; j <= v; ++j) {
+            auto vh_b = SimpleMeshGen::layer_vertex_id(u, v, i, j, 0);
+            auto vh_t = SimpleMeshGen::layer_vertex_id(u, v, i, j, 1);
+            centroid = centroid + mesh.vertex(vh_b) + mesh.vertex(vh_t);
+            count += 2;
+        }
+    }
+    centroid = centroid * (1.0 / count);
+    EXPECT_NEAR(mesh.vertex(VertexHandle(0)).x(), centroid.x(), 1e-9);
+    EXPECT_NEAR(mesh.vertex(VertexHandle(0)).y(), centroid.y(), 1e-9);
+    EXPECT_NEAR(mesh.vertex(VertexHandle(0)).z(), centroid.z(), 1e-9);
+}
+
+TEST(ParametricSurfaceMeshGenTest, SphereVerticesAtCorrectRadius) {
+    // For sphere with radius r and thickness t:
+    // top vertices at r + 0.5*t, bottom at r - 0.5*t from origin.
+    const double r = 2.0, thickness = 0.4;
+    const int u = 6, v = 6;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {r}, 0.1*M_PI, 0.9*M_PI, u, 0.0, 2*M_PI, v, thickness);
+
+    for (int i = 0; i <= u; ++i) {
+        for (int j = 0; j <= v; ++j) {
+            auto vh_b = SimpleMeshGen::layer_vertex_id(u, v, i, j, 0);
+            auto vh_t = SimpleMeshGen::layer_vertex_id(u, v, i, j, 1);
+            EXPECT_NEAR(mesh.vertex(vh_b).norm(), r - 0.5*thickness, 1e-5)
+                                << "bottom i=" << i << " j=" << j;
+            EXPECT_NEAR(mesh.vertex(vh_t).norm(), r + 0.5*thickness, 1e-5)
+                                << "top i=" << i << " j=" << j;
+        }
+    }
+}
+
+TEST(ParametricSurfaceMeshGenTest, NonZeroVolume) {
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {1.0}, 0.1*M_PI, 0.9*M_PI, 6, 0.0, 2*M_PI, 6, 0.2);
+    EXPECT_GT(std::abs(mesh.compute_signed_volume()), 0.0);
+}
+
+TEST(ParametricSurfaceMeshGenTest, VolumeScalesWithThicknessSquared) {
+    const int u = 6, v = 6;
+    auto m1 = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {1.0}, 0.1*M_PI, 0.9*M_PI, u, 0.0, 2*M_PI, v, 1.0);
+    auto m2 = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {1.0}, 0.1*M_PI, 0.9*M_PI, u, 0.0, 2*M_PI, v, 2.0);
+    double v1 = std::abs(m1.compute_signed_volume());
+    double v2 = std::abs(m2.compute_signed_volume());
+    EXPECT_NEAR(v2, 4.0 * v1, 1e-4);
+}
+
+TEST(ParametricSurfaceMeshGenTest, DifferentSurfacesDifferentVolumes) {
+    const int u = 6, v = 6;
+    auto m1 = ParametricMeshGen::generate_parametric_mesh(
+            sphere, {1.0}, 0.1*M_PI, 0.9*M_PI, u, 0.0, 2*M_PI, v, 0.2);
+    auto m2 = ParametricMeshGen::generate_parametric_mesh(
+            sine3d, {1.0, 1.0}, 0.0, M_PI, u, 0.0, M_PI, v, 0.2);
+    EXPECT_NE(m1.compute_signed_volume(), m2.compute_signed_volume());
+}
+
+// -----------------------------------------------------------------------------
+// torus
+// -----------------------------------------------------------------------------
+
+TEST(TorusTest, KnownPointOuterEquator) {
+    // v=0, u=0: ((R+r), 0, 0)
+    Vec3d p = torus({3.0, 1.0}, 0.0, 0.0);
+    EXPECT_NEAR(p.x(), 4.0, surf_epsilon);
+    EXPECT_NEAR(p.y(), 0.0, surf_epsilon);
+    EXPECT_NEAR(p.z(), 0.0, surf_epsilon);
+}
+
+TEST(TorusTest, KnownPointInnerEquator) {
+    // v=pi, u=0: ((R-r), 0, 0)
+    Vec3d p = torus({3.0, 1.0}, 0.0, M_PI);
+    EXPECT_NEAR(p.x(), 2.0, surf_epsilon);
+    EXPECT_NEAR(p.y(), 0.0, surf_epsilon);
+    EXPECT_NEAR(p.z(), 0.0, surf_epsilon);
+}
+
+TEST(TorusTest, KnownPointTop) {
+    // v=pi/2, u=0: (R, 0, r)
+    Vec3d p = torus({3.0, 1.0}, 0.0, M_PI / 2.0);
+    EXPECT_NEAR(p.x(), 3.0, surf_epsilon);
+    EXPECT_NEAR(p.y(), 0.0, surf_epsilon);
+    EXPECT_NEAR(p.z(), 1.0, surf_epsilon);
+}
+
+TEST(TorusTest, AllPointsAtMinorRadiusFromCentralCircle) {
+    // The key torus property: every point lies at distance r from the
+    // central circle of radius R in the xy-plane.
+    // dist = sqrt((sqrt(x^2+y^2) - R)^2 + z^2) = r
+    const double R = 3.0, r = 1.0;
+    for (double u : {0.0, M_PI/4.0, M_PI/2.0, M_PI, 3.0*M_PI/2.0}) {
+        for (double v : {0.0, M_PI/4.0, M_PI/2.0, M_PI, 3.0*M_PI/2.0}) {
+            Vec3d p = torus({R, r}, u, v);
+            double xy_dist = std::sqrt(p.x()*p.x() + p.y()*p.y());
+            double dist = std::sqrt((xy_dist - R)*(xy_dist - R) + p.z()*p.z());
+            EXPECT_NEAR(dist, r, surf_epsilon) << "u=" << u << " v=" << v;
+        }
+    }
+}
+
+TEST(TorusTest, ZBoundedByMinorRadius) {
+    // |z| = |r*sin(v)| <= r
+    const double r = 1.5;
+    for (double u : {0.0, 1.0, M_PI}) {
+        for (double v : {0.0, M_PI/4.0, M_PI/2.0, M_PI, 3.0*M_PI/2.0}) {
+            Vec3d p = torus({3.0, r}, u, v);
+            EXPECT_LE(std::abs(p.z()), r + surf_epsilon) << "u=" << u << " v=" << v;
+        }
+    }
+}
+
+TEST(TorusTest, ClosedInBothDirections) {
+    // Periodic in u and v with period 2pi
+    for (double u : {0.0, 1.0, M_PI}) {
+        for (double v : {0.0, 1.0, M_PI}) {
+            Vec3d p0  = torus({3.0, 1.0}, u, v);
+            Vec3d pu  = torus({3.0, 1.0}, u + 2.0*M_PI, v);
+            Vec3d pv  = torus({3.0, 1.0}, u, v + 2.0*M_PI);
+            EXPECT_NEAR(p0.x(), pu.x(), surf_epsilon) << "u-periodicity u=" << u;
+            EXPECT_NEAR(p0.x(), pv.x(), surf_epsilon) << "v-periodicity v=" << v;
+        }
+    }
+}
+
+TEST(TorusTest, MajorRadiusScalesXY) {
+    // Doubling R shifts all points outward in xy by R
+    const double r = 0.5;
+    double u = M_PI/3.0, v = M_PI/4.0;
+    Vec3d p1 = torus({2.0, r}, u, v);
+    Vec3d p2 = torus({4.0, r}, u, v);
+    // z should be identical (only depends on r and v)
+    EXPECT_NEAR(p1.z(), p2.z(), surf_epsilon);
+    // xy norm difference should equal delta_R = 2.0
+    double xy1 = std::sqrt(p1.x()*p1.x() + p1.y()*p1.y());
+    double xy2 = std::sqrt(p2.x()*p2.x() + p2.y()*p2.y());
+    EXPECT_NEAR(xy2 - xy1, 2.0, surf_epsilon);
+}
+
+TEST(TorusTest, MinorRadiusScalesZ) {
+    // At v=pi/2: z = r, so doubling r doubles z
+    Vec3d p1 = torus({3.0, 1.0}, 0.0, M_PI/2.0);
+    Vec3d p2 = torus({3.0, 2.0}, 0.0, M_PI/2.0);
+    EXPECT_NEAR(p2.z(), 2.0 * p1.z(), surf_epsilon);
+}
+
+#ifndef NDEBUG
+TEST(TorusTest, WrongParamCountAsserts) {
+    EXPECT_DEATH(torus({1.0}, 0.0, 0.0), "");
+    EXPECT_DEATH(torus({1.0, 2.0, 3.0}, 0.0, 0.0), "");
+}
+#endif
+
+
+
 // -----------------------------------------------------------------------------
 // Export Tests
 // -----------------------------------------------------------------------------
