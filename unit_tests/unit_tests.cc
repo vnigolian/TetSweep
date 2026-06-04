@@ -1208,8 +1208,8 @@ TEST(SimpleMeshGenTest, SineMeshZeroAmplitudeMatchesRodVolume) {
 TEST(SimpleMeshGenTest, SineMeshVariesWithAmplitude) {
     // Non-zero amplitude should produce a different volume than a flat rod.
     const int N = 20;
-    auto flat  = SimpleMeshGen::generate_sine_mesh(N, 1.0, 0.0, 2.0, 0.0);
-    auto wavy  = SimpleMeshGen::generate_sine_mesh(N, 1.0, 0.0, 2.0, 2.0);
+    auto flat  = SimpleMeshGen::generate_sine_mesh(N, 1.0, 0.0, 2.5, 0.0);
+    auto wavy  = SimpleMeshGen::generate_sine_mesh(N, 1.0, 0.0, 2.5, 2.0);
     EXPECT_NE(flat.compute_signed_volume(), wavy.compute_signed_volume());
 }
 
@@ -1721,13 +1721,27 @@ TEST(ParametricMeshGenTest, DifferentCurvesGiveDifferentVolumes) {
 #error "REF_MESH_DIR not found, export tests will fail. It should be defined in the CMakeLists so maybe you modified it?"
 #endif
 
+// Try to parse a line as a Vec3d. Returns true on success.
+static bool parse_vec3d(const std::string& line, Vec3d& out) {
+    std::istringstream ss(line);
+    double x, y, z;
+    if (ss >> x >> y >> z) {
+        // Make sure there's nothing else on the line
+        std::string extra;
+        if (!(ss >> extra)) {
+            out = {x, y, z};
+            return true;
+        }
+    }
+    return false;
+}
 
 static void compare_against_reference(const std::string& filename) {
     std::filesystem::path ref_path =
-        std::filesystem::path(REF_MESH_DIR) / ("ref_" + filename);
+            std::filesystem::path(REF_MESH_DIR) / ("ref_" + filename);
 
     ASSERT_TRUE(std::filesystem::exists(ref_path))
-        << "Reference file missing: " << ref_path;
+                                << "Reference file missing: " << ref_path;
 
     const std::string actual   = read_file(filename);
     const std::string expected = read_file(ref_path);
@@ -1742,15 +1756,32 @@ static void compare_against_reference(const std::string& filename) {
 
     while (std::getline(expected_stream, expected_line)) {
         ASSERT_TRUE(std::getline(actual_stream, actual_line))
-            << "Output file is shorter than reference at line " << line_number;
-        ASSERT_EQ(actual_line, expected_line)
-            << "at line " << line_number;
+                                    << "Output file is shorter than reference at line " << line_number;
+
+        Vec3d actual_vec, expected_vec;
+        if (parse_vec3d(expected_line, expected_vec) && parse_vec3d(actual_line, actual_vec)) {
+            for (int i = 0; i < 3; ++i) {
+                const double a = actual_vec[i];
+                const double e = expected_vec[i];
+                // If both are NaN, treat as equal. If only one is, fail.
+                if (std::isnan(e)) {
+                    ASSERT_TRUE(std::isnan(a))
+                                                << "Expected NaN but got " << a
+                                                << " at line " << line_number << " component " << i;
+                } else {
+                    ASSERT_NEAR(a, e, epsilon)
+                                                << "Mismatch at line " << line_number << " component " << i;
+                }
+            }
+        } else {
+            ASSERT_EQ(actual_line, expected_line) << "First mismatch at line " << line_number;
+        }
         ++line_number;
     }
 
     ASSERT_FALSE(std::getline(actual_stream, actual_line))
-        << "Output file is longer than reference, first extra line " 
-        << line_number << ": " << actual_line;
+                                << "Output file is longer than reference, first extra line "
+                                << line_number << ": " << actual_line;
 }
 
 

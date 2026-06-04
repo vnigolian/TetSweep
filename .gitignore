@@ -2,6 +2,7 @@
 .idea/*
 external/*
 build*/*
+cmake-build-release/*
 
 # Prerequisites
 *.d
