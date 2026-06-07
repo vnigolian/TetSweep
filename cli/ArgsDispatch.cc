@@ -38,7 +38,7 @@ namespace tet_weave {
         } else if (mesh_type == "minimal-non-star-shaped-domain") {
             mesh = SimpleMeshGen::generate_minimal_non_star_shaped_domain_mesh();
 
-        } else if (mesh_type == "minimal-star-shaped-domain") {
+        } else if (mesh_type == "minimal-non-star-shaped") {
             mesh = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
 
         } else if (mesh_type == "rod") {

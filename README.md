@@ -45,15 +45,15 @@ Run `./cli/tet_weave --help` for the full list of options.
 
 ### Simple Meshes
 
-| Mesh Type | Preview | Arguments | Notes |
-|---|---|---|---|
-| `minimal-non-star-shaped-domain` | ![minimal non-star-shaped](figs/minimal_non_star_shaped.png) | — | Fixed mesh, no parameters |
-| `minimal-star-shaped-domain` | ![minimal star-shaped](figs/minimal_star_shaped.png) | — | Fixed mesh, no parameters |
-| `rod` | ![rod](figs/rod.png) | `--length` (default: 10)<br>`--axial-scaling` (default: 1.0)<br>`--torsion-rad` (default: 0.0) | Straight rod mesh; torsion twists the cross-sections along the axis |
-| `sine` | ![sine](figs/sine.png) | `--length` (default: 10)<br>`--axial-scaling` (default: 1.0)<br>`--torsion-rad` (default: 0.0)<br>`--sine-period` (default: 1.0)<br>`--sine-x-scale` (default: 1.0)<br>`--sine-y-scale` (default: 1.0)<br>`--sine-z-scale` (default: 1.0) | Rod mesh deformed along a sine wave |
-| `spiral` | ![spiral](figs/spiral.png) | `--length` (default: 10)<br>`--torsion-rad` (default: 0.0)<br>`--spiral-x-scale` (default: 1.0)<br>`--spiral-turn-count` (default: 1.0) | Rod mesh wound into a spiral |
-| `trefoil-knot` | ![trefoil knot](figs/trefoil_knot.png) | `--length` (default: 10)<br>`--torsion-rad` (default: 0.0)<br>`--trefoil-range` (default: 1.0) | Rod mesh deformed into a trefoil knot; `--trefoil-range` controls how much of the knot is generated [0..1] |
-| `layer` | ![layer](figs/layer.png) | `--width` (default: 10)<br>`--height` (default: 10) | Flat width × height layer mesh |
+| Mesh Type                        | Preview                                                                    | Arguments | Notes                                                                                                      |
+|----------------------------------|----------------------------------------------------------------------------|---|------------------------------------------------------------------------------------------------------------|
+| `minimal-non-star-shaped`        | ![minimal non-star-shaped](figs/minimal_non_star_shaped.png)               | — | Fixed mesh, no parameters                                                                                  |
+| `minimal-non-star-shaped-domain` | ![minimal non star-shaped domain](figs/minimal_non_star_shaped_domain.png) | — | Fixed mesh, no parameters. Same connectivity as the minimal non-star-shaped mesh, but star-shaped.         |
+| `rod`                            | ![rod](figs/rod.png)                                                       | `--length` (default: 10)<br>`--axial-scaling` (default: 1.0)<br>`--torsion-rad` (default: 0.0) | Straight rod mesh; torsion twists the cross-sections along the axis                                        |
+| `sine`                           | ![sine](figs/sine.png)                                                     | `--length` (default: 10)<br>`--axial-scaling` (default: 1.0)<br>`--torsion-rad` (default: 0.0)<br>`--sine-period` (default: 1.0)<br>`--sine-x-scale` (default: 1.0)<br>`--sine-y-scale` (default: 1.0)<br>`--sine-z-scale` (default: 1.0) | Rod mesh deformed along a sine wave                                                                        |
+| `spiral`                         | ![spiral](figs/spiral.png)                                                 | `--length` (default: 10)<br>`--torsion-rad` (default: 0.0)<br>`--spiral-x-scale` (default: 1.0)<br>`--spiral-turn-count` (default: 1.0) | Rod mesh wound into a spiral                                                                               |
+| `trefoil-knot`                   | ![trefoil knot](figs/trefoil_knot.png)                                     | `--length` (default: 10)<br>`--torsion-rad` (default: 0.0)<br>`--trefoil-range` (default: 1.0) | Rod mesh deformed into a trefoil knot; `--trefoil-range` controls how much of the knot is generated [0..1] |
+| `layer`                          | ![layer](figs/layer.png)                                                   | `--width` (default: 10)<br>`--height` (default: 10) | Flat width × height layer mesh                                                                             |
 
 ---
 
