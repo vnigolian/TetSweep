@@ -56,7 +56,6 @@ namespace tet_weave{
                     -std::sin(3 * t)};
     }
 
-
     Vec3d funny_spiral(const std::vector<double>& params, double t){
         assert(params.size() == 4 && "parametric complex spiral takes exactly 4 arguments");
 
