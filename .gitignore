@@ -4,8 +4,6 @@ external/*
 build*/*
 cmake-build-release/*
 
-docs/tetweave_wasm.js
-docs/tetweave_wasm.wasm
 
 # Prerequisites
 *.d
