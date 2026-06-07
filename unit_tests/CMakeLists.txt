@@ -15,13 +15,13 @@ if(NOT TARGET googletest)
 endif()
 
 
-enable_testing()
-
 include_directories(../include)
 add_executable(unit_tests unit_tests.cc)
 target_link_libraries(unit_tests
         GTest::gtest_main
 )
+
+add_test(NAME unit_tests COMMAND $<TARGET_FILE:unit_tests>)
 
 set(REF_MESH_DIR "${CMAKE_SOURCE_DIR}/unit_tests/ref_meshes")
 target_compile_definitions(unit_tests PRIVATE
@@ -32,7 +32,3 @@ target_compile_definitions(unit_tests PRIVATE
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
 
-#include_directories("${PROJECT_SOURCE_DIR}/include")
-
-#add_executable(c-example c-example.c ../include/acutest.h)
-#add_executable(cpp-example cpp-example.cc ../include/acutest.h)

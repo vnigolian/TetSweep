@@ -2,6 +2,13 @@
 
 A lightweight C++ library for generating tetrahedral meshes from parametric curves and surfaces, with no heavy dependencies.
 
+
+# TODOS
+* jupyter notebook online visualiser?
+* CI&CD setup on github
+* finalise readme (renders)
+
+
 ## Building
 
 ```bash
@@ -118,6 +125,3 @@ Vec3d my_surface(const std::vector<double>& params, double u, double v) {
 Then add it to the dispatch table in `main.cpp`.
 
 
-# TODOS
-* jupyter notebook online visualiser?
-* CI&CD setup on github

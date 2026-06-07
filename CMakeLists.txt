@@ -21,6 +21,9 @@ endif()
 
 set(CLI_BINARY_PATH "${CMAKE_CURRENT_BINARY_DIR}/cli/tet_weave")
 
+include(CTest)
+enable_testing()
+
 add_subdirectory(cli)
 add_subdirectory(unit_tests)
 
