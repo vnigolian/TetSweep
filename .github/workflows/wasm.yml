@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+            token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v12
@@ -27,4 +29,4 @@ jobs:
           git config user.email "github-actions@github.com"
           git add docs/tetweave_wasm.js docs/tetweave_wasm.wasm
           git diff --staged --quiet || git commit -m "ci: update WASM build"
-          git push
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
