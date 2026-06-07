@@ -1,13 +1,16 @@
 # TetWeave
 
-A lightweight C++ library for generating tetrahedral meshes from parametric curves and surfaces, without any dependencies.
-
 ![CI](https://github.com/vnigolian/TetWeave/actions/workflows/ci.yml/badge.svg)
 
+A lightweight header-only C++ library for generating tetrahedral meshes from parametric curves and surfaces, without any dependencies.
+
+It can be used with the provided cli to generate meshes (either in `.obj` or `.ovm` formats), or integrated into other libraries (cf. `minimal_example/`).
+
+An online viewer and generator is available [here](https://vnigolian.github.io/TetWeave/).
+
+
 # TODOS
-* jupyter notebook online visualiser?
 * fix boundary stuff for KH
-* add minimal example, showing you don't need any dependency
 * finalise readme (renders)
 
 

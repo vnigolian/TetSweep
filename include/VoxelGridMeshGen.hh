@@ -2,10 +2,6 @@
 
 #include "TetMesh.hh"
 
-#pragma once
-
-#include "TetMesh.hh"
-
 
 namespace tet_weave{
 

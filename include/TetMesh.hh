@@ -1,7 +1,5 @@
 #pragma once
 
-#include <algorithm>
-
 #include "Vec3d.hh"
 
 

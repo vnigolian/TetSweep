@@ -11,14 +11,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(NOT TARGET argparse)
-    FetchContent_Declare(argparse
-            GIT_REPOSITORY  https://github.com/p-ranav/argparse.git
-            #SOURCE_DIR "${EXTERNAL_DIR}/argparse"
-    )
-    FetchContent_MakeAvailable(argparse)
-endif()
-
 include_directories(include/)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -35,6 +27,7 @@ if(EMSCRIPTEN)
 else()
     add_subdirectory(unit_tests)
     add_subdirectory(cli)
+    add_subdirectory(minimal_example)
 endif()
 
 

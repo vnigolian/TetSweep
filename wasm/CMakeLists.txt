@@ -1,3 +1,12 @@
+
+if(NOT TARGET argparse)
+    FetchContent_Declare(argparse
+            GIT_REPOSITORY  https://github.com/p-ranav/argparse.git
+            #SOURCE_DIR "${EXTERNAL_DIR}/argparse"
+    )
+    FetchContent_MakeAvailable(argparse)
+endif()
+
 add_executable(tetweave_wasm
         main_wasm.cc
         ${CMAKE_SOURCE_DIR}/cli/ArgsDispatch.cc

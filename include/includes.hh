@@ -13,3 +13,6 @@
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include <map>
+#include <sstream>
+#include <algorithm>
