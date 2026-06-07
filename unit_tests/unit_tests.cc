@@ -538,6 +538,23 @@ TEST(TetMeshTest, SetVertexDoesNotAffectOthers) {
     EXPECT_DOUBLE_EQ(m.vertex(v1).z(), 0.0);
 }
 
+TEST(TetMeshTest, IsBoundaryFirstVertex) {
+    EXPECT_FALSE(TetMesh::is_boundary(VertexHandle(0)));
+
+    //NOTE: this is topologically WRONG.
+    // It shows that in our setting, with always one interior vertex,
+    // it's always the first one that is considered interior
+    EXPECT_FALSE(make_single_tet().is_boundary(VertexHandle(0)));
+}
+
+TEST(TetMeshTest, IsBoundaryOtherVertices) {
+    EXPECT_TRUE(TetMesh::is_boundary(VertexHandle(1)));
+    EXPECT_TRUE(TetMesh::is_boundary(VertexHandle(42)));
+    EXPECT_TRUE(make_single_tet().is_boundary(VertexHandle(1)));
+    EXPECT_TRUE(make_single_tet().is_boundary(VertexHandle(2)));
+    EXPECT_TRUE(make_single_tet().is_boundary(VertexHandle(3)));
+}
+
 // =============================================================================
 // Cells
 // =============================================================================
@@ -899,6 +916,129 @@ TEST_F(TetMeshOvmTest, EmptyMeshWritesAllSections) {
     EXPECT_NE(content.find("Faces"),     std::string::npos);
     EXPECT_NE(content.find("Polyhedra"), std::string::npos);
 }
+
+
+// =============================================================================
+// Boundary export tests
+// =============================================================================
+
+class TetMeshBoundaryOvmTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        path_ = std::filesystem::temp_directory_path() / "tet_weave_boundary_test.ovm";
+        path_ = "boundary_test.ovm";
+    }
+    /*void TearDown() override {
+        std::filesystem::remove(path_);
+    }*/
+    std::filesystem::path path_;
+};
+
+TEST_F(TetMeshBoundaryOvmTest, FileIsCreated) {
+    write_to_file(make_single_tet(), path_, true);
+    EXPECT_TRUE(std::filesystem::exists(path_));
+}
+
+TEST_F(TetMeshBoundaryOvmTest, HeaderPresent) {
+    write_to_file(make_single_tet(), path_, true);
+    EXPECT_NE(read_file(path_).find("OVM ASCII"), std::string::npos);
+}
+
+TEST_F(TetMeshBoundaryOvmTest, InteriorVertexSkipped) {
+    // Single tet: 4 vertices total, boundary has 3 (v0 skipped).
+    write_to_file(make_single_tet(), path_, true);
+    EXPECT_NE(read_file(path_).find("Vertices\n3\n"), std::string::npos);
+}
+
+TEST_F(TetMeshBoundaryOvmTest, BoundaryVertexPositionsCorrect) {
+    // v1=(1,0,0), v2=(0,1,0), v3=(0,0,1) remapped to indices 0,1,2
+    write_to_file(make_single_tet(), path_, true);
+    const std::string content = read_file(path_);
+    EXPECT_NE(content.find("1 0 0"), std::string::npos);
+    EXPECT_NE(content.find("0 1 0"), std::string::npos);
+    EXPECT_NE(content.find("0 0 1"), std::string::npos);
+    // Interior vertex position (0 0 0) should NOT appear
+    EXPECT_EQ(content.find("Vertices\n3\n0 0 0"), std::string::npos);
+}
+
+TEST_F(TetMeshBoundaryOvmTest, SingleTetBoundaryEdgeCount) {
+    // Single tet boundary: triangle (v1,v2,v3) has 3 edges.
+    write_to_file(make_single_tet(), path_, true);
+    EXPECT_NE(read_file(path_).find("Edges\n3\n"), std::string::npos);
+}
+
+TEST_F(TetMeshBoundaryOvmTest, SingleTetBoundaryFaceCount) {
+    // Single tet: 1 boundary face (opposite interior vertex).
+    write_to_file(make_single_tet(), path_, true);
+    EXPECT_NE(read_file(path_).find("Faces\n1\n"), std::string::npos);
+}
+
+TEST_F(TetMeshBoundaryOvmTest, PolyhedraIsZero) {
+    // Boundary export has no volumetric cells.
+    write_to_file(make_single_tet(), path_, true);
+    EXPECT_NE(read_file(path_).find("Polyhedra\n0\n"), std::string::npos);
+}
+
+TEST_F(TetMeshBoundaryOvmTest, BoundaryVertexCountEqualsNVerticesMinusOne) {
+    // In a star-shaped mesh, boundary has exactly n_vertices - 1 vertices.
+    const int N = 4;
+    auto rod = SimpleMeshGen::generate_rod_mesh(N);
+    write_to_file(rod, path_, true);
+    const std::string expected = "Vertices\n" + std::to_string(rod.n_vertices() - 1) + "\n";
+    EXPECT_NE(read_file(path_).find(expected), std::string::npos);
+}
+
+TEST_F(TetMeshBoundaryOvmTest, BoundaryFaceCountEqualsNCells) {
+    // In a star-shaped mesh, each cell contributes exactly one boundary face
+    // (the face opposite the interior vertex), and no two cells share a
+    // boundary face. So n_boundary_faces == n_cells.
+    const int N = 4;
+    auto rod = SimpleMeshGen::generate_rod_mesh(N);
+    write_to_file(rod, path_, true);
+    const std::string expected = "Faces\n" + std::to_string(rod.n_cells()) + "\n";
+    EXPECT_NE(read_file(path_).find(expected), std::string::npos);
+}
+
+TEST_F(TetMeshBoundaryOvmTest, DefaultArgumentIsFullExport) {
+    // write_to_file without boundary_only should produce the full mesh.
+    TetMesh m = make_single_tet();
+    write_to_file(m, path_);
+    EXPECT_NE(read_file(path_).find("Vertices\n4\n"), std::string::npos);
+    EXPECT_NE(read_file(path_).find("Polyhedra\n1\n"), std::string::npos);
+}
+
+TEST_F(TetMeshBoundaryOvmTest, BoundaryAndFullExportDiffer) {
+    TetMesh m = make_single_tet();
+    auto path_full = std::filesystem::temp_directory_path() / "tet_weave_full_test.ovm";
+    write_to_file(m, path_,      true);
+    write_to_file(m, path_full,  false);
+    EXPECT_NE(read_file(path_), read_file(path_full));
+    std::filesystem::remove(path_full);
+}
+
+TEST_F(TetMeshBoundaryOvmTest, RemappedIndicesAreContiguous) {
+    // After skipping vertex 0, the boundary vertex section should start
+    // immediately after "Vertices\nN\n" with no gaps.
+    // We verify by checking the first boundary vertex is written at line 3
+    // (header, count, first vertex).
+    write_to_file(make_single_tet(), path_, true);
+    std::istringstream ss(read_file(path_));
+    std::string line;
+    std::getline(ss, line); // OVM ASCII
+    std::getline(ss, line); // Vertices
+    std::getline(ss, line); // 3
+    std::getline(ss, line); // first vertex — should be "1 0 0"
+    EXPECT_EQ(line, "1 0 0");
+}
+
+#ifndef NDEBUG
+TEST(TetMeshBoundaryTest, UnsupportedExtensionThrowsWithBoundaryOnly) {
+    TetMesh m = make_single_tet();
+    EXPECT_THROW(
+        write_to_file(m, std::filesystem::temp_directory_path() / "out.xyz", true),
+        std::runtime_error);
+}
+#endif
 
 
 // =============================================================================
@@ -2304,7 +2444,6 @@ TEST(TorusTest, WrongParamCountAsserts) {
     EXPECT_DEATH(torus({1.0, 2.0, 3.0}, 0.0, 0.0), "");
 }
 #endif
-
 
 
 // -----------------------------------------------------------------------------
