@@ -19,6 +19,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 endif()
 
+set(CLI_BINARY_PATH "${CMAKE_CURRENT_BINARY_DIR}/cli/tet_weave")
+
 add_subdirectory(cli)
 add_subdirectory(unit_tests)
 

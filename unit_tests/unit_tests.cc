@@ -2833,4 +2833,124 @@ TEST_F(MeshExportTest, Torus) {
 
 
 
+// -----------------------------------------------------------------------------
+// CLI Tests
+// -----------------------------------------------------------------------------
+
+#ifndef CLI_BINARY_PATH
+#error "CLI_BINARY_PATH not found, CLI tests will fail. It should be defined in the CMakeLists so maybe you modified it?"
+#endif
+
+
+static std::string run_cli_args(const std::string& args) {
+    return std::string(CLI_BINARY_PATH) + " " + args;
+}
+
+static int run_cli(const std::string& args) {
+    //std::cout<<" -> running CLI with args: "<<args<<std::endl;
+    return std::system((std::string(CLI_BINARY_PATH) + " " + args).c_str());
+}
+
+// Helper to build a CLI argument string with full double precision
+static std::string to_full_double(double v) {
+    std::ostringstream ss;
+    ss << std::setprecision(std::numeric_limits<double>::max_digits10) << v;
+    return ss.str();
+}
+
+class CliTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        //check_cli_binary_exists();
+        ASSERT_TRUE(std::filesystem::exists(CLI_BINARY_PATH))<< "CLI binary not found at: " << CLI_BINARY_PATH
+                                                             << " — make sure the tet_weave target is built";
+    }
+};
+
+TEST_F(CliTest, SineMesh) {
+
+    ASSERT_EQ(run_cli(" --mesh-type sine"
+                      " --length 50"
+                      " --axial-scaling " + to_full_double(5.0/50) +
+                      " --torsion-rad " + to_full_double(M_PI/2.0) +
+                      " --sine-period 2.0"
+                      " --sine-amplitude 2.0"
+                      " --output sine.ovm"), 0);
+    compare_against_reference("sine.ovm");
+    std::filesystem::remove("sine.ovm");
+}
+
+TEST_F(CliTest, SpiralMesh) {
+    ASSERT_EQ(run_cli(" --mesh-type spiral"
+                      " --length 60"
+                      " --torsion-rad " + to_full_double(2*M_PI) +
+                      " --spiral-x-scale 10.0"
+                      " --spiral-turn-count 5.0"
+                      " --output spiral.ovm"), 0);
+    compare_against_reference("spiral.ovm");
+    std::filesystem::remove("spiral.ovm");
+}
+
+TEST_F(CliTest, TrefoilKnotMesh) {
+    ASSERT_EQ(run_cli(" --mesh-type trefoil-knot"
+                      " --length 100"
+                      " --torsion-rad " + to_full_double(4*M_PI) + " "
+                      " --trefoil-range 0.9 "
+                      " --output trefoil.ovm"), 0);
+    compare_against_reference("trefoil.ovm");
+    std::filesystem::remove("trefoil.ovm");
+}
+
+TEST_F(CliTest, Sine3d) {
+    ASSERT_EQ(run_cli(" --mesh-type para-sine3d"
+                      " --para-args 2.0 2.0"
+                      " --para-u 0.0 " + to_full_double(2*M_PI) +
+                      " --para-v 0.0 " + to_full_double(2*M_PI) +
+                      " --width 60"
+                      " --height 40"
+                      " --para-thickness 0.2 "
+                      " --output sine3d.ovm"), 0);
+    compare_against_reference("sine3d.ovm");
+    std::filesystem::remove("sine3d.ovm");
+}
+
+TEST_F(CliTest, SpherePatch) {
+    ASSERT_EQ(run_cli(" --mesh-type para-sphere"
+                      " --para-args 2.0"
+                      " --para-u " + to_full_double(0.1*M_PI) + " " + to_full_double(0.75*M_PI) +
+                      " --para-v 0.0 " + to_full_double(0.66*M_PI) +
+                      " --width 10"
+                      " --height 20"
+                      " --para-thickness 0.2"
+                      " --output sphere.ovm"), 0);
+    compare_against_reference("sphere.ovm");
+    std::filesystem::remove("sphere.ovm");
+}
+
+TEST_F(CliTest, HelicoidalRing) {
+    ASSERT_EQ(run_cli(" --mesh-type para-helicoidal-ring"
+                      " --para-args 10.0"
+                      " --para-u 0.0 0.5"
+                      " --para-v 0.0 0.999"
+                      " --width 10"
+                      " --height 200"
+                      " --para-thickness 0.2"
+                      " --output helicoidal_ring.ovm"), 0);
+    compare_against_reference("helicoidal_ring.ovm");
+    std::filesystem::remove("helicoidal_ring.ovm");
+}
+
+TEST_F(CliTest, Torus) {
+    ASSERT_EQ(run_cli(" --mesh-type para-torus --para-args 4.0 1.0 "
+                      " --para-u 0.0 " + to_full_double(1.5*M_PI) +
+                      " --para-v 0.0 " + to_full_double(1.5*M_PI) +
+                      " --width 10 "
+                      " --height 6 "
+                      " --para-thickness 0.2"
+                      " --output torus.ovm"), 0);
+    compare_against_reference("torus.ovm");
+    std::filesystem::remove("torus.ovm");
+}
+
+
 

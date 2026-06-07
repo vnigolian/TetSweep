@@ -2,18 +2,6 @@
 
 message("external dir: "${EXTERNAL_DIR})
 
-
-#if(NOT TARGET acutest)
-#    FetchContent_Declare(acutest
-#            GIT_REPOSITORY  https://github.com/mity/acutest.git
-#            SOURCE_DIR "${EXTERNAL_DIR}/acutest"
-#    )
-    #FetchContent_MakeAvailable(acutest)
-#endif()
-
-
-#include_directories("${EXTERNAL_DIR}/acutest/include")
-
 include(FetchContent)
 
 if(NOT TARGET googletest)
@@ -37,7 +25,8 @@ target_link_libraries(unit_tests
 
 set(REF_MESH_DIR "${CMAKE_SOURCE_DIR}/unit_tests/ref_meshes")
 target_compile_definitions(unit_tests PRIVATE
-    REF_MESH_DIR="${REF_MESH_DIR}"
+        REF_MESH_DIR="${REF_MESH_DIR}"
+        CLI_BINARY_PATH="${CLI_BINARY_PATH}"
 )
 
 include(GoogleTest)
