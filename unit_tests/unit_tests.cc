@@ -926,11 +926,10 @@ class TetMeshBoundaryOvmTest : public ::testing::Test {
 protected:
     void SetUp() override {
         path_ = std::filesystem::temp_directory_path() / "tet_weave_boundary_test.ovm";
-        path_ = "boundary_test.ovm";
     }
-    /*void TearDown() override {
+    void TearDown() override {
         std::filesystem::remove(path_);
-    }*/
+    }
     std::filesystem::path path_;
 };
 
@@ -1039,6 +1038,156 @@ TEST(TetMeshBoundaryTest, UnsupportedExtensionThrowsWithBoundaryOnly) {
         std::runtime_error);
 }
 #endif
+
+
+// =============================================================================
+// .obj export tests
+// =============================================================================
+
+class TetMeshObjTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        path_ = std::filesystem::temp_directory_path() / "tet_weave_test.obj";
+    }
+    void TearDown() override {
+        std::filesystem::remove(path_);
+    }
+    std::filesystem::path path_;
+};
+
+// Helper: count lines in a string starting with a given prefix.
+static int count_lines_with_prefix(const std::string& content, const std::string& prefix) {
+    int count = 0;
+    std::istringstream ss(content);
+    std::string line;
+    while (std::getline(ss, line))
+        if (line.rfind(prefix, 0) == 0) ++count;
+    return count;
+}
+
+// -----------------------------------------------------------------------------
+// Full export (boundary_only=false)
+// -----------------------------------------------------------------------------
+
+TEST_F(TetMeshObjTest, FileIsCreated) {
+    write_to_file(make_single_tet(), path_);
+    EXPECT_TRUE(std::filesystem::exists(path_));
+}
+
+TEST_F(TetMeshObjTest, FullExportVertexCount) {
+    // Single tet: 4 vertices.
+    write_to_file(make_single_tet(), path_);
+    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "v "), 4);
+}
+
+TEST_F(TetMeshObjTest, FullExportFaceCount) {
+    // Single tet: 4 faces (one per face of the tet).
+    write_to_file(make_single_tet(), path_);
+    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "f "), 4);
+}
+
+TEST_F(TetMeshObjTest, FullExportVertexPositions) {
+    write_to_file(make_single_tet(), path_);
+    const std::string content = read_file(path_);
+    EXPECT_NE(content.find("v 0 0 0"), std::string::npos);
+    EXPECT_NE(content.find("v 1 0 0"), std::string::npos);
+    EXPECT_NE(content.find("v 0 1 0"), std::string::npos);
+    EXPECT_NE(content.find("v 0 0 1"), std::string::npos);
+}
+
+TEST_F(TetMeshObjTest, FullExportFacesUseOneBasisedIndices) {
+    // OBJ is 1-based — no face index should be 0.
+    write_to_file(make_single_tet(), path_);
+    std::istringstream ss(read_file(path_));
+    std::string line;
+    while (std::getline(ss, line)) {
+        if (line.rfind("f ", 0) != 0) continue;
+        std::istringstream ls(line.substr(2));
+        int a, b, c;
+        ls >> a >> b >> c;
+        EXPECT_GE(a, 1) << "face index must be >= 1";
+        EXPECT_GE(b, 1) << "face index must be >= 1";
+        EXPECT_GE(c, 1) << "face index must be >= 1";
+    }
+}
+
+TEST_F(TetMeshObjTest, FullExportNoEdgesSection) {
+    // .obj doesn't have edges.
+    write_to_file(make_single_tet(), path_);
+    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "e "), 0);
+}
+
+TEST_F(TetMeshObjTest, FullExportVertexCountScalesWithMesh) {
+    const int N = 4;
+    auto rod = SimpleMeshGen::generate_rod_mesh(N);
+    write_to_file(rod, path_);
+    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "v "), rod.n_vertices());
+}
+
+// -----------------------------------------------------------------------------
+// Boundary export (boundary_only=true)
+// -----------------------------------------------------------------------------
+
+TEST_F(TetMeshObjTest, BoundaryExportVertexCount) {
+    // Single tet boundary: 3 vertices (interior vertex skipped).
+    write_to_file(make_single_tet(), path_, true);
+    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "v "), 3);
+}
+
+TEST_F(TetMeshObjTest, BoundaryExportFaceCount) {
+    // Single tet boundary: 1 face.
+    write_to_file(make_single_tet(), path_, true);
+    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "f "), 1);
+}
+
+TEST_F(TetMeshObjTest, BoundaryExportInteriorVertexAbsent) {
+    // Interior vertex (0,0,0) should not appear in boundary export.
+    write_to_file(make_single_tet(), path_, true);
+    const std::string content = read_file(path_);
+    EXPECT_EQ(content.find("v 0 0 0"), std::string::npos);
+}
+
+TEST_F(TetMeshObjTest, BoundaryExportBoundaryVerticesPresent) {
+    write_to_file(make_single_tet(), path_, true);
+    const std::string content = read_file(path_);
+    EXPECT_NE(content.find("v 1 0 0"), std::string::npos);
+    EXPECT_NE(content.find("v 0 1 0"), std::string::npos);
+    EXPECT_NE(content.find("v 0 0 1"), std::string::npos);
+}
+
+TEST_F(TetMeshObjTest, BoundaryExportFaceIsOneTwoThree) {
+    // With 3 boundary vertices remapped to OBJ indices 1,2,3,
+    // the single boundary face should be "f 1 2 3".
+    write_to_file(make_single_tet(), path_, true);
+    EXPECT_NE(read_file(path_).find("f 1 2 3"), std::string::npos);
+}
+
+TEST_F(TetMeshObjTest, BoundaryExportVertexCountScalesWithMesh) {
+    const int N = 4;
+    auto rod = SimpleMeshGen::generate_rod_mesh(N);
+    write_to_file(rod, path_, true);
+    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "v "), rod.n_vertices() - 1);
+}
+
+TEST_F(TetMeshObjTest, BoundaryExportFaceCountEqualsNCells) {
+    // In a star-shaped mesh, boundary faces == n_cells.
+    const int N = 4;
+    auto rod = SimpleMeshGen::generate_rod_mesh(N);
+    write_to_file(rod, path_, true);
+    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "f "), rod.n_cells());
+}
+
+// -----------------------------------------------------------------------------
+// Full vs boundary differ
+// -----------------------------------------------------------------------------
+
+TEST_F(TetMeshObjTest, FullAndBoundaryExportDiffer) {
+    auto path_full = std::filesystem::temp_directory_path() / "tet_weave_full.obj";
+    write_to_file(make_single_tet(), path_,      true);
+    write_to_file(make_single_tet(), path_full,  false);
+    EXPECT_NE(read_file(path_), read_file(path_full));
+    std::filesystem::remove(path_full);
+}
 
 
 // =============================================================================
@@ -2456,10 +2605,13 @@ TEST(TorusTest, WrongParamCountAsserts) {
 
 // Try to parse a line as a Vec3d. Returns true on success.
 static bool parse_vec3d(const std::string& line, Vec3d& out) {
-    std::istringstream ss(line);
+    // Handle both plain "x y z" (OVM) and "v x y z" (OBJ)
+    const std::string& s = (line.size() > 2 && line[0] == 'v' && line[1] == ' ')
+                           ? line.substr(2)
+                           : line;
+    std::istringstream ss(s);
     double x, y, z;
     if (ss >> x >> y >> z) {
-        // Make sure there's nothing else on the line
         std::string extra;
         if (!(ss >> extra)) {
             out = {x, y, z};
@@ -2526,7 +2678,13 @@ protected:
         
         write_to_file(mesh_, mesh_name_);
         compare_against_reference(mesh_name_);
-        //std::filesystem::remove(mesh_name_);
+        std::filesystem::remove(mesh_name_);
+
+        const std::string mesh_boundary_name =
+                std::filesystem::path(mesh_name_).stem().string() + ".obj";
+        write_to_file(mesh_, mesh_boundary_name, true);
+        compare_against_reference(mesh_boundary_name);
+        std::filesystem::remove(mesh_boundary_name);
     }
 
     TetMesh mesh_;
@@ -2542,13 +2700,16 @@ TEST_F(MeshExportTest, KnottedHole) {
 
 TEST_F(MeshExportTest, MinimalNonStarShaped) {
     auto codomain_mesh = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
-    write_to_file(codomain_mesh, "min_non_star_shaped_codomain.ovm");
-    compare_against_reference("min_non_star_shaped_codomain.ovm");
-
+    std::string codomain_mesh_name = "min_non_star_shaped_codomain.ovm";
+    write_to_file(codomain_mesh, codomain_mesh_name);
+    compare_against_reference(codomain_mesh_name);
+    std::filesystem::remove(codomain_mesh_name);
 
     auto domain_mesh = SimpleMeshGen::generate_minimal_non_star_shaped_domain_mesh();
-    write_to_file(domain_mesh, "min_non_star_shaped_domain.ovm");
-    compare_against_reference("min_non_star_shaped_domain.ovm");
+    std::string domain_mesh_name = "min_non_star_shaped_domain.ovm";
+    write_to_file(domain_mesh, domain_mesh_name);
+    compare_against_reference(domain_mesh_name);
+    std::filesystem::remove(domain_mesh_name);
     SUCCEED();
 }
 
@@ -2588,9 +2749,9 @@ TEST_F(MeshExportTest, CircleMesh) {
 
 
 TEST_F(MeshExportTest, MultiBranchSpiral) {
-    mesh_ = ParametricMeshGen::generate_parametric_mesh(multi_branch_spiral, {0.5, 5.0, 2.0, 0.1},
+    mesh_ = ParametricMeshGen::generate_parametric_mesh(multi_branch_spiral, {0.5, 3.0, 2.0, 0.1},
                                                                                   0.0, 1.0, 
-                                                                                  100, 0.1);
+                                                                                  200, 0.1);
     mesh_name_ = "multi_branch_spiral.ovm";
 }
 

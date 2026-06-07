@@ -367,6 +367,25 @@ class TetMesh {
                 }
             }
         }
+
+        void write_obj(const std::filesystem::path& path, bool boundary_only = false) const {
+            std::ofstream f(path);
+            if (!f)
+                throw std::runtime_error(
+                        "TetMesh::write_obj: cannot open '" + path.string() + "'");
+
+            const int v_start = boundary_only ? 1 : 0;
+            for (int i = v_start; i < n_vertices(); ++i) {
+                const Vec3d& v = vertices_[i];
+                f << "v " << v.x() << " " << v.y() << " " << v.z() << "\n";
+            }
+
+            const FaceTable ft = build_face_table(boundary_only);
+            for (const auto& face : ft.faces)
+                f << "f " << face[0] + 1 << " "
+                  << face[1] + 1 << " "
+                  << face[2] + 1 << "\n";
+        }
     };
 
     // -------------------------------------------------------------------------
@@ -382,6 +401,8 @@ class TetMesh {
 
         if (ext == ".ovm") {
             mesh.write_ovm(path, boundary_only);
+        } else if (ext == ".obj") {
+            mesh.write_obj(path, boundary_only);
         } else {
             throw std::runtime_error(
                     "TetMesh::write_to_file: unsupported format '" + ext + "'");
