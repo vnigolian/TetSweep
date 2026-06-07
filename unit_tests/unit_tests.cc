@@ -782,29 +782,29 @@ protected:
 
 
 TEST_F(TetMeshOvmTest, FileIsCreated) {
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_TRUE(std::filesystem::exists(path_));
-    make_single_tet().write_to_file("test.ovm");
+    write_to_file(make_single_tet(), "test.ovm");
 }
 
 TEST_F(TetMeshOvmTest, HeaderPresent) {
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("OVM ASCII"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, VertexSectionPresent) {
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("Vertices"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, VertexCountCorrect) {
     // Single tet has 4 vertices.
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("Vertices\n4\n"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, VertexPositionsWritten) {
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     const std::string content = read_file(path_);
     EXPECT_NE(content.find("0 0 0"), std::string::npos);
     EXPECT_NE(content.find("1 0 0"), std::string::npos);
@@ -813,52 +813,52 @@ TEST_F(TetMeshOvmTest, VertexPositionsWritten) {
 }
 
 TEST_F(TetMeshOvmTest, EdgeSectionPresent) {
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("Edges"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, EdgeCountCorrect) {
     // A single tet has 6 unique edges.
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("Edges\n6\n"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, EdgeStoredAsSourceTarget) {
     // Each edge line must be "vs vt" with vs < vt.
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("0 1"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, FaceSectionPresent) {
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("Faces"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, FaceCountCorrect) {
     // A single tet has 4 unique faces.
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("Faces\n4\n"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, FaceDefinedByValenceAndHalfEdges) {
     // Each face line must start with valence 3.
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("3 "), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, PolyhedraSectionPresent) {
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("Polyhedra"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, PolyhedraCountCorrect) {
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("Polyhedra\n1\n"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, PolyhedronDefinedByValenceAndHalfFaces) {
     // Each cell line must start with valence 4 (four half-faces).
-    make_single_tet().write_to_file(path_);
+    write_to_file(make_single_tet(), path_);
     EXPECT_NE(read_file(path_).find("4 "), std::string::npos);
 }
 
@@ -872,7 +872,7 @@ TEST_F(TetMeshOvmTest, SharedEdgesDeduplicatedAcrossCells) {
     auto v4 = m.add_vertex(1, 1, 1);
     m.add_cell(v0, v1, v2, v3);
     m.add_cell(v1, v2, v3, v4);
-    m.write_to_file(path_);
+    write_to_file(m, path_);
     EXPECT_NE(read_file(path_).find("Edges\n9\n"), std::string::npos);
 }
 
@@ -886,13 +886,13 @@ TEST_F(TetMeshOvmTest, SharedFacesDeduplicatedAcrossCells) {
     auto v4 = m.add_vertex(1, 1, 1);
     m.add_cell(v0, v1, v2, v3);
     m.add_cell(v1, v2, v3, v4);
-    m.write_to_file(path_);
+    write_to_file(m, path_);
     EXPECT_NE(read_file(path_).find("Faces\n7\n"), std::string::npos);
 }
 
 TEST_F(TetMeshOvmTest, EmptyMeshWritesAllSections) {
     TetMesh m;
-    m.write_to_file(path_);
+    write_to_file(m, path_);
     const std::string content = read_file(path_);
     EXPECT_NE(content.find("Vertices"),  std::string::npos);
     EXPECT_NE(content.find("Edges"),     std::string::npos);
@@ -908,7 +908,7 @@ TEST_F(TetMeshOvmTest, EmptyMeshWritesAllSections) {
 TEST(TetMeshTest, UnsupportedExtensionThrows) {
     TetMesh m = make_single_tet();
     EXPECT_THROW(
-        m.write_to_file(std::filesystem::temp_directory_path() / "out.xyz"),
+        write_to_file(m, std::filesystem::temp_directory_path() / "out.xyz"),
         std::runtime_error);
 }
 
@@ -1880,7 +1880,7 @@ TEST(ParametricSurfaceMeshTest, DifferentSurfacesGiveDifferentVolumes) {
 TEST(ParametricSurfaceMeshTest, SmokeTestWritesToFile) {
     auto mesh = ParametricMeshGen::generate_parametric_mesh(
             torus, {2.0, 0.5}, 0.0, 2*M_PI, 10, 0.0, 2*M_PI, 10, 0.1);
-    mesh.write_to_file("test_surface.ovm");
+    write_to_file(mesh, "test_surface.ovm");
     EXPECT_TRUE(std::filesystem::exists("test_surface.ovm"));
 }
 
@@ -2385,7 +2385,7 @@ protected:
         if (HasFatalFailure()) return;
         if(mesh_name_ == "") return;
         
-        mesh_.write_to_file(mesh_name_);
+        write_to_file(mesh_, mesh_name_);
         compare_against_reference(mesh_name_);
         //std::filesystem::remove(mesh_name_);
     }
@@ -2403,12 +2403,12 @@ TEST_F(MeshExportTest, KnottedHole) {
 
 TEST_F(MeshExportTest, MinimalNonStarShaped) {
     auto codomain_mesh = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
-    codomain_mesh.write_to_file("min_non_star_shaped_codomain.ovm");
+    write_to_file(codomain_mesh, "min_non_star_shaped_codomain.ovm");
     compare_against_reference("min_non_star_shaped_codomain.ovm");
 
 
     auto domain_mesh = SimpleMeshGen::generate_minimal_non_star_shaped_domain_mesh();
-    domain_mesh.write_to_file("min_non_star_shaped_domain.ovm");
+    write_to_file(domain_mesh, "min_non_star_shaped_domain.ovm");
     compare_against_reference("min_non_star_shaped_domain.ovm");
     SUCCEED();
 }

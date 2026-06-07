@@ -168,22 +168,6 @@ public:
     }
 
 
-    // -------------------------------------------------------------------------
-    // File I/O — format detected from path extension
-    // -------------------------------------------------------------------------
-
-    /// Write the mesh to `path`. The output format is inferred from the file
-    /// extension. Currently supported: .ovm
-    void write_to_file(const std::filesystem::path& path) const {
-        const std::string ext = path.extension().string();
-
-        if (ext == ".ovm") {
-            write_ovm(path);
-        } else {
-            throw std::runtime_error(
-                "TetMesh::write_to_file: unsupported format '" + ext + "'");
-        }
-    }
 
 private:
     // -------------------------------------------------------------------------
@@ -303,51 +287,6 @@ private:
         return flipped ? 2 * fi + 1 : 2 * fi;
     }
 
-    // -------------------------------------------------------------------------
-    // Writers — one private method per format
-    // -------------------------------------------------------------------------
-
-    void write_ovm(const std::filesystem::path& path) const {
-        std::ofstream f(path);
-        if (!f)
-            throw std::runtime_error(
-                "TetMesh::write_ovm: cannot open '" + path.string() + "'");
-
-        const EdgeTable et = build_edge_table();
-        const FaceTable ft = build_face_table();
-
-        // Header
-        f << "OVM ASCII\n";
-
-        // Vertices
-        f << "Vertices\n" << n_vertices() << "\n";
-        for (const auto& v : vertices_)
-            f << v.x() << " " << v.y() << " " << v.z() << "\n";
-
-        // Edges — each as "vs vt" (vs < vt; half-edge 2i = forward, 2i+1 = reverse)
-        f << "Edges\n" << et.edges.size() << "\n";
-        for (const auto& e : et.edges)
-            f << e[0] << " " << e[1] << "\n";
-
-        // Faces — each defined by its 3 half-edges following stored winding
-        f << "Faces\n" << ft.faces.size() << "\n";
-        for (const auto& face : ft.faces) {
-            // Walk the three directed edges of this face: (a→b), (b→c), (c→a)
-            int he0 = half_edge_idx(et, face[0], face[1]);
-            int he1 = half_edge_idx(et, face[1], face[2]);
-            int he2 = half_edge_idx(et, face[2], face[0]);
-            f << "3 " << he0 << " " << he1 << " " << he2 << "\n";
-        }
-
-        // Polyhedra — each defined by its 4 half-faces
-        f << "Polyhedra\n" << n_cells() << "\n";
-        for (const auto& c : cells_) {
-            f << "4";
-            for (int s = 0; s < 4; ++s)
-                f << " " << half_face_idx(ft, c, s);
-            f << "\n";
-        }
-    }
 
 
     // -------------------------------------------------------------------------
@@ -356,6 +295,73 @@ private:
 
     std::vector<Vec3d> vertices_;
     std::vector<Cell>  cells_;
+
+public:
+
+        // -------------------------------------------------------------------------
+        // Writers — one method per format
+        // -------------------------------------------------------------------------
+
+        void write_ovm(const std::filesystem::path& path) const {
+            std::ofstream f(path);
+            if (!f)
+                throw std::runtime_error(
+                        "TetMesh::write_ovm: cannot open '" + path.string() + "'");
+
+            const EdgeTable et = build_edge_table();
+            const FaceTable ft = build_face_table();
+
+            // Header
+            f << "OVM ASCII\n";
+
+            // Vertices
+            f << "Vertices\n" << n_vertices() << "\n";
+            for (const auto& v : vertices_)
+                f << v.x() << " " << v.y() << " " << v.z() << "\n";
+
+            // Edges — each as "vs vt" (vs < vt; half-edge 2i = forward, 2i+1 = reverse)
+            f << "Edges\n" << et.edges.size() << "\n";
+            for (const auto& e : et.edges)
+                f << e[0] << " " << e[1] << "\n";
+
+            // Faces — each defined by its 3 half-edges following stored winding
+            f << "Faces\n" << ft.faces.size() << "\n";
+            for (const auto& face : ft.faces) {
+                // Walk the three directed edges of this face: (a→b), (b→c), (c→a)
+                int he0 = half_edge_idx(et, face[0], face[1]);
+                int he1 = half_edge_idx(et, face[1], face[2]);
+                int he2 = half_edge_idx(et, face[2], face[0]);
+                f << "3 " << he0 << " " << he1 << " " << he2 << "\n";
+            }
+
+            // Polyhedra — each defined by its 4 half-faces
+            f << "Polyhedra\n" << n_cells() << "\n";
+            for (const auto& c : cells_) {
+                f << "4";
+                for (int s = 0; s < 4; ++s)
+                    f << " " << half_face_idx(ft, c, s);
+                f << "\n";
+            }
+        }
 };
+
+    // -------------------------------------------------------------------------
+    // File I/O — format detected from path extension
+    // -------------------------------------------------------------------------
+
+    /// Write the mesh to `path`. The output format is inferred from the file
+    /// extension. Currently supported: .ovm
+    void write_to_file(const TetMesh& mesh, const std::filesystem::path& path) {
+        const std::string ext = path.extension().string();
+
+        if (ext == ".ovm") {
+            mesh.write_ovm(path);
+        } else {
+            throw std::runtime_error(
+                    "TetMesh::write_to_file: unsupported format '" + ext + "'");
+        }
+    }
+
+
 
 } // namespace tet_weave
