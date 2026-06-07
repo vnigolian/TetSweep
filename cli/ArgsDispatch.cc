@@ -104,6 +104,8 @@ namespace tet_weave {
                             thickness);
                 }
             }
+        }else{
+            std::cerr<<" -> unknown mesh type "<<mesh_type<<std::endl;
         }
 
         return mesh;

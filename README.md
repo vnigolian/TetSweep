@@ -61,12 +61,12 @@ Run `./cli/tet_weave --help` for the full list of options.
 
 A rod mesh is deformed so that its central axis follows a parametric curve `f(t) → R³`. The `--para-t` range controls the portion of the curve to generate, `--length` controls the number of segments, and `--para-thickness` controls the tube radius.
 
-| Mesh Type | Preview | Arguments | Notes |
-|---|---|---|---|
-| `para-circle` | ![circle](figs/para_circle.png) | `--para-args radius z_scale`<br>`--para-t` (default: 0.0 1.0)<br>`--length` (default: 10)<br>`--para-thickness` | `z_scale=0` gives a flat circle; non-zero gives a helix |
-| `para-trefoil-knot` | ![parametric trefoil](figs/para_trefoil.png) | `--para-t` (default: 0.0 1.0)<br>`--length` (default: 10)<br>`--para-thickness` | No `--para-args` needed |
+| Mesh Type | Preview                                                   | Arguments | Notes |
+|---|-----------------------------------------------------------|---|---|
+| `para-circle` | ![circle](figs/para_circle.png)                           | `--para-args radius z_scale`<br>`--para-t` (default: 0.0 1.0)<br>`--length` (default: 10)<br>`--para-thickness` | `z_scale=0` gives a flat circle; non-zero gives a helix |
+| `para-trefoil-knot` | ![parametric trefoil](figs/para_trefoil_knot.png)         | `--para-t` (default: 0.0 1.0)<br>`--length` (default: 10)<br>`--para-thickness` | No `--para-args` needed |
 | `para-multi-branch-spiral` | ![multi branch spiral](figs/para_multi_branch_spiral.png) | `--para-args center_radius branches branch_length z_scale`<br>`--para-t` (default: 0.0 1.0)<br>`--length` (default: 10)<br>`--para-thickness` | `branches` controls the number of spiral arms |
-| `para-funny-spiral` | ![funny spiral](figs/para_funny_spiral.png) | `--para-args a b c z_scale`<br>`--para-t` (default: 0.0 1.0)<br>`--length` (default: 10)<br>`--para-thickness` | Lissajous-like curve; `a`, `b`, `c` control the frequency of each component |
+| `para-funny-spiral` | ![funny spiral](figs/para_funny_spiral.png)               | `--para-args a b c z_scale`<br>`--para-t` (default: 0.0 1.0)<br>`--length` (default: 10)<br>`--para-thickness` | Lissajous-like curve; `a`, `b`, `c` control the frequency of each component |
 
 ---
 
