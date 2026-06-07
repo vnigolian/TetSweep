@@ -7,12 +7,17 @@ set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
 project(TetWeave)
 cmake_minimum_required(VERSION 3.19)
 
-#set (CMAKE_CXX_STANDARD 20)
-#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++17")
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(NOT TARGET argparse)
+    FetchContent_Declare(argparse
+            GIT_REPOSITORY  https://github.com/p-ranav/argparse.git
+            #SOURCE_DIR "${EXTERNAL_DIR}/argparse"
+    )
+    FetchContent_MakeAvailable(argparse)
+endif()
 
 include_directories(include/)
 
@@ -20,13 +25,16 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(" enabling sanitizers")
     add_compile_options(-fsanitize=address -fsanitize=undefined)
     add_link_options(-fsanitize=address -fsanitize=undefined)
-
 endif()
 
 include(CTest)
 enable_testing()
 
-add_subdirectory(cli)
-add_subdirectory(unit_tests)
+if(EMSCRIPTEN)
+    add_subdirectory(wasm)
+else()
+    add_subdirectory(unit_tests)
+    add_subdirectory(cli)
+endif()
 
 

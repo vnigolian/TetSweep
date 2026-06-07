@@ -326,11 +326,7 @@ class TetMesh {
         // -------------------------------------------------------------------------
 
 
-        void write_ovm(const std::filesystem::path &path, bool boundary_only = false) const {
-            std::ofstream f(path);
-            if (!f)
-                throw std::runtime_error(
-                        "TetMesh::write_ovm: cannot open '" + path.string() + "'");
+        void write_ovm_to_stream(std::ostream& f, bool boundary_only = false) const {
 
             const EdgeTable et = build_edge_table(boundary_only);
             const FaceTable ft = build_face_table(boundary_only);
@@ -370,11 +366,7 @@ class TetMesh {
             }
         }
 
-        void write_obj(const std::filesystem::path& path, bool boundary_only = false) const {
-            std::ofstream f(path);
-            if (!f)
-                throw std::runtime_error(
-                        "TetMesh::write_obj: cannot open '" + path.string() + "'");
+        void write_obj_to_stream(std::ostream& f, bool boundary_only = false) const {
 
             const int v_start = boundary_only ? 1 : 0;
             for (int i = v_start; i < n_vertices(); ++i) {
@@ -396,19 +388,38 @@ class TetMesh {
 
     /// Write the mesh to `path`. The output format is inferred from the file
     /// extension. Currently supported: .ovm
-    void write_to_file(const TetMesh& mesh,
-                       const std::filesystem::path& path,
-                       bool boundary_only = false) {
+    inline void write_to_file(const TetMesh& mesh,
+                              const std::filesystem::path& path,
+                              bool boundary_only = false) {
         const std::string ext = path.extension().string();
 
+        std::ofstream f(path);
+        if (!f)
+            throw std::runtime_error(
+                    "TetMesh::write_to_file: cannot open '" + path.string() + "'");
+
         if (ext == ".ovm") {
-            mesh.write_ovm(path, boundary_only);
+            mesh.write_ovm_to_stream(f, boundary_only);
         } else if (ext == ".obj") {
-            mesh.write_obj(path, boundary_only);
+            mesh.write_obj_to_stream(f, boundary_only);
         } else {
             throw std::runtime_error(
                     "TetMesh::write_to_file: unsupported format '" + ext + "'");
         }
     }
+
+    inline std::string mesh_to_string(const TetMesh& mesh,
+                                      const std::string& format,
+                                      bool boundary_only = false) {
+        std::ostringstream ss;
+        if (format == "obj")
+            mesh.write_obj_to_stream(ss, boundary_only);
+        else if (format == "ovm")
+            mesh.write_ovm_to_stream(ss, boundary_only);
+        else
+            throw std::runtime_error("mesh_to_string: unsupported format '" + format + "'");
+        return ss.str();
+    }
+
 
 } // namespace tet_weave
