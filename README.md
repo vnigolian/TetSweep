@@ -2,6 +2,7 @@
 
 A lightweight C++ library for generating tetrahedral meshes from parametric curves and surfaces, with no heavy dependencies.
 
+![CI](https://github.com/vnigolian/TetWeave/actions/workflows/ci.yml/badge.svg)
 
 # TODOS
 * jupyter notebook online visualiser?

@@ -6,21 +6,78 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-test:
+    name: ${{ matrix.config.name }}
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: GCC Debug + Sanitizers
+            cc: gcc
+            cxx: g++
+            build_type: Debug
+            cmake_extra: -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+            linker_flags: -fsanitize=address,undefined
+
+          - name: GCC Release
+            cc: gcc
+            cxx: g++
+            build_type: Release
+            cmake_extra: ""
+            linker_flags: ""
+
+          - name: Clang Debug + Sanitizers
+            cc: clang
+            cxx: clang++
+            build_type: Debug
+            cmake_extra: -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+            linker_flags: -fsanitize=address,undefined
+
+          - name: Clang Release
+            cc: clang
+            cxx: clang++
+            build_type: Release
+            cmake_extra: ""
+            linker_flags: ""
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt
+          key: apt-${{ runner.os }}-${{ hashFiles('.github/workflows/ci.yml') }}
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake build-essential libgtest-dev
+          sudo apt-get install -y cmake build-essential libgtest-dev clang
+
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: build-${{ matrix.config.name }}-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', '**/*.cpp', '**/*.hh') }}
+          restore-keys: |
+            build-${{ matrix.config.name }}-${{ runner.os }}-
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
+        env:
+          CC: ${{ matrix.config.cc }}
+          CXX: ${{ matrix.config.cxx }}
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
+            -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.config.linker_flags }}" \
+            ${{ matrix.config.cmake_extra }}
 
       - name: Build
         run: cmake --build build --parallel
