@@ -13,11 +13,12 @@ using namespace tet_weave;
 
 extern "C" {
 
+
 /// Generate a mesh from a CLI-style argument string and return it as an OBJ string.
 /// e.g. "--mesh-type rod --length 10"
 /// The caller must free the returned string with free_string().
 EMSCRIPTEN_KEEPALIVE
-char* generate_mesh_str(const char* args_c, int boundary_only) {
+char* generate_mesh_str(const char* args_c) {
 
     // Split the args string into tokens
     std::vector<std::string> tokens;
@@ -36,18 +37,16 @@ char* generate_mesh_str(const char* args_c, int boundary_only) {
     // Parse arguments
     argparse::ArgumentParser parser;
     if (parse_args(argc, argv.data(), parser)) {
-        // Return empty string on parse failure
         char* buf = static_cast<char*>(std::malloc(1));
         buf[0] = '\0';
         return buf;
     }
 
-    // Generate mesh
-    TetMesh mesh = generate_mesh_from_args(parser);
+    tet_weave::TetMesh mesh = generate_mesh_from_args(parser);
+    const bool boundary_only = parser.get<bool>("--boundary-only");
 
-    // Serialize to OBJ string
     std::ostringstream out;
-    mesh.write_obj_to_stream(out, boundary_only != 0);
+    mesh.write_obj_to_stream(out, boundary_only);
 
     const std::string result = out.str();
     char* buf = static_cast<char*>(std::malloc(result.size() + 1));

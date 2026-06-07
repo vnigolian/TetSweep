@@ -6,7 +6,7 @@ A lightweight C++ library for generating tetrahedral meshes from parametric curv
 
 # TODOS
 * jupyter notebook online visualiser?
-* CI&CD setup on github
+* fix boundary stuff for KH
 * finalise readme (renders)
 
 

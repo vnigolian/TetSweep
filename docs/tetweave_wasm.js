@@ -5170,7 +5170,7 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['memory'] != 'undefined', 'missing Wasm export: memory');
   assert(typeof wasmExports['__indirect_function_table'] != 'undefined', 'missing Wasm export: __indirect_function_table');
   ___getTypeName = createExportWrapper('__getTypeName', 1);
-  _generate_mesh_str = Module['_generate_mesh_str'] = createExportWrapper('generate_mesh_str', 2);
+  _generate_mesh_str = Module['_generate_mesh_str'] = createExportWrapper('generate_mesh_str', 1);
   _malloc = createExportWrapper('malloc', 1);
   _free_string = Module['_free_string'] = createExportWrapper('free_string', 1);
   _free = createExportWrapper('free', 1);
