@@ -79,6 +79,7 @@ class TetMesh {
         /// Append a vertex and return its handle.
         VertexHandle add_vertex(Vec3d pos) {
             vertices_.push_back(pos);
+            boundary_v_.push_back(true);
             return VertexHandle(static_cast<int>(vertices_.size()) - 1);
         }
 
@@ -139,8 +140,12 @@ class TetMesh {
 
         //only the first vertex is interior in this simple mesh implementation
         // (dedicated for this specific type of generated meshes)
-        static bool is_boundary(const VertexHandle &vh) {
-            return vh.idx();
+        bool is_boundary(const VertexHandle &vh) const {
+            return boundary_v_[vh.idx()];
+        }
+
+        void mark_as_interior(const VertexHandle &vh){
+            boundary_v_[vh.idx()] = false;
         }
 
         // -------------------------------------------------------------------------
@@ -315,6 +320,7 @@ class TetMesh {
         // -------------------------------------------------------------------------
 
         std::vector<Vec3d> vertices_;
+        std::vector<bool> boundary_v_;
         std::vector<Cell> cells_;
 
     public:

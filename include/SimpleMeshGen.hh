@@ -11,8 +11,8 @@ namespace tet_weave {
 
             TetMesh mesh;
 
-            //auto v0 = mesh.add_vertex({0,0,  0});
-            auto vb = mesh.add_vertex({0,0,-1}); //here so it's still v0
+            auto vi = mesh.add_vertex({0,0,0});
+            auto vb = mesh.add_vertex({0,0,-1});
             auto v1 = mesh.add_vertex({-1,-1,0});
             auto v2 = mesh.add_vertex({-1,-3,0});
             auto v3 = mesh.add_vertex({-2,1, 0});
@@ -20,21 +20,22 @@ namespace tet_weave {
             auto v5 = mesh.add_vertex({1,-3, 0});
             auto v6 = mesh.add_vertex({1,-1, 0});
             auto vt = mesh.add_vertex({0,0, 1});
-            auto vi = mesh.add_vertex({0,0,0});
 
-            mesh.add_cell({ v2, v1,vb, vi});
+            mesh.add_cell({v2, v1, vb, vi});
             mesh.add_cell({v3, v2, vb, vi});
             mesh.add_cell({v4, v3, vb, vi});
             mesh.add_cell({v5, v4, vb, vi});
             mesh.add_cell({v6, v5, vb, vi});
             mesh.add_cell({v1, v6, vb, vi});
 
-            mesh.add_cell({ v1, v2,vt, vi});
+            mesh.add_cell({v1, v2, vt, vi});
             mesh.add_cell({v2, v3, vt, vi});
             mesh.add_cell({v3, v4, vt, vi});
             mesh.add_cell({v4, v5, vt, vi});
             mesh.add_cell({v5, v6, vt, vi});
             mesh.add_cell({v6, v1, vt, vi});
+
+            mesh.mark_as_interior(vi);
 
             return mesh;
         }
@@ -44,10 +45,10 @@ namespace tet_weave {
 
             auto mesh = generate_minimal_non_star_shaped_mesh();
 
-            mesh.set_vertex(VertexHandle(1), {-1, -3,0});
-            mesh.set_vertex(VertexHandle(2), {-2, -3,0});
-            mesh.set_vertex(VertexHandle(5), {2, -3, 0});
-            mesh.set_vertex(VertexHandle(6), {1, -3, 0});
+            mesh.set_vertex(VertexHandle(2), {-1, -3,0});
+            mesh.set_vertex(VertexHandle(3), {-2, -3,0});
+            mesh.set_vertex(VertexHandle(6), {2, -3, 0});
+            mesh.set_vertex(VertexHandle(7), {1, -3, 0});
 
             return mesh;
         }
@@ -65,6 +66,7 @@ namespace tet_weave {
             TetMesh mesh;
             //the only interior vertex
             auto v0 = mesh.add_vertex({0.0, 0.0, length * 0.5});
+            mesh.mark_as_interior(v0);
 
             //add vertices
             /* b---c
@@ -328,6 +330,7 @@ namespace tet_weave {
             // Interior vertex at centroid of the grid — added first so it gets index 0.
             // Grid spans [0, u_steps] × [0, v_steps] with z=0.
             auto vi = mesh.add_vertex(u_steps * 0.5, v_steps * 0.5, 0.5);
+            mesh.mark_as_interior(vi);
 
             // Boundary vertices — row-major: vertex(i,j) = 1 + i*(v_steps+1) + j
             for(int k(0); k<2;k++)

@@ -120,7 +120,7 @@ namespace tet_weave{
             for(auto x(0); x < width_; x++){
                 for(auto y(0); y < height_; y++){
                     for(auto z(0); z < depth_; z++){
-                        if(!is_digged(x,y,z)){
+                        if(!is_dug(x, y, z)){
                             generate_five_tet_voxel(x,y,z, (x+y+z) % 2);
                             voxel_count++;
                         }
@@ -147,65 +147,65 @@ namespace tet_weave{
         void generate_five_tet_voxel(int x, int y, int z,
                            bool orientation){
 
-    //std::cout<<" -- generating cube at "<<x<<", "<<y<<", "<<z<<" with orientation "<<orientation<<std::endl;
-    const int i = coordinates_to_corner_vertex_idx(x,y,z);
-    //std::cout<<" -- corner vertex idx = "<<i<<std::endl;
+            //std::cout<<" -- generating cube at "<<x<<", "<<y<<", "<<z<<" with orientation "<<orientation<<std::endl;
+            const int i = coordinates_to_corner_vertex_idx(x,y,z);
+            //std::cout<<" -- corner vertex idx = "<<i<<std::endl;
 
-    const int w(width_ + 1), h(height_ + 1), wh(w * h);
+            const int w(width_ + 1), h(height_ + 1), wh(w * h);
 
-    if(orientation){
-        mesh_.add_cell(VertexHandle(     w     + i),
-                       VertexHandle(wh + w + 1 + i),
-                       VertexHandle(wh         + i),
-                       VertexHandle(wh + w     + i));
+            if(orientation){
+                mesh_.add_cell(VertexHandle(     w     + i),
+                               VertexHandle(wh + w + 1 + i),
+                               VertexHandle(wh         + i),
+                               VertexHandle(wh + w     + i));
 
-        mesh_.add_cell(VertexHandle(     w     + i),
-                       VertexHandle(         1 + i),
-                       VertexHandle(wh + w + 1 + i),
-                       VertexHandle(     w + 1 + i));
+                mesh_.add_cell(VertexHandle(     w     + i),
+                               VertexHandle(         1 + i),
+                               VertexHandle(wh + w + 1 + i),
+                               VertexHandle(     w + 1 + i));
 
-        mesh_.add_cell(VertexHandle(             i),
-                       VertexHandle(         1 + i),
-                       VertexHandle(wh         + i),
-                       VertexHandle(     w     + i));
+                mesh_.add_cell(VertexHandle(             i),
+                               VertexHandle(         1 + i),
+                               VertexHandle(wh         + i),
+                               VertexHandle(     w     + i));
 
-        mesh_.add_cell(VertexHandle(     w     + i),
-                       VertexHandle(         1 + i),
-                       VertexHandle(wh         + i),
-                       VertexHandle(wh + w + 1 + i));
+                mesh_.add_cell(VertexHandle(     w     + i),
+                               VertexHandle(         1 + i),
+                               VertexHandle(wh         + i),
+                               VertexHandle(wh + w + 1 + i));
 
-        mesh_.add_cell(VertexHandle(         1 + i),
-                       VertexHandle(wh     + 1 + i),
-                       VertexHandle(wh         + i),
-                       VertexHandle(wh + w + 1 + i));
-    }else{
+                mesh_.add_cell(VertexHandle(         1 + i),
+                               VertexHandle(wh     + 1 + i),
+                               VertexHandle(wh         + i),
+                               VertexHandle(wh + w + 1 + i));
+            }else{
 
-        mesh_.add_cell(VertexHandle(           + i),
-                       VertexHandle(     w + 1 + i),
-                       VertexHandle(wh + w     + i),
-                       VertexHandle(     w     + i));
+                mesh_.add_cell(VertexHandle(           + i),
+                               VertexHandle(     w + 1 + i),
+                               VertexHandle(wh + w     + i),
+                               VertexHandle(     w     + i));
 
-        mesh_.add_cell(VertexHandle(             i),
-                       VertexHandle(         1 + i),
-                       VertexHandle(wh     + 1 + i),
-                       VertexHandle(     w + 1 + i));
+                mesh_.add_cell(VertexHandle(             i),
+                               VertexHandle(         1 + i),
+                               VertexHandle(wh     + 1 + i),
+                               VertexHandle(     w + 1 + i));
 
-        mesh_.add_cell(VertexHandle(             i),
-                       VertexHandle(wh     + 1 + i),
-                       VertexHandle(wh         + i),
-                       VertexHandle(wh + w     + i));
+                mesh_.add_cell(VertexHandle(             i),
+                               VertexHandle(wh     + 1 + i),
+                               VertexHandle(wh         + i),
+                               VertexHandle(wh + w     + i));
 
-        mesh_.add_cell(VertexHandle(     w + 1 + i),
-                       VertexHandle(wh     + 1 + i),
-                       VertexHandle(wh + w     + i),
-                       VertexHandle(wh + w + 1 + i));
+                mesh_.add_cell(VertexHandle(     w + 1 + i),
+                               VertexHandle(wh     + 1 + i),
+                               VertexHandle(wh + w     + i),
+                               VertexHandle(wh + w + 1 + i));
 
-        mesh_.add_cell(VertexHandle(             i),
-                       VertexHandle(     w + 1 + i),
-                       VertexHandle(wh     + 1 + i),
-                       VertexHandle(wh + w     + i));
-    }
-}
+                mesh_.add_cell(VertexHandle(             i),
+                               VertexHandle(     w + 1 + i),
+                               VertexHandle(wh     + 1 + i),
+                               VertexHandle(wh + w     + i));
+            }
+        }
 
 
         void dig_hole(int start_x, int start_y, int start_z,
@@ -235,7 +235,7 @@ namespace tet_weave{
         }
 
 
-        bool is_digged(int x, int y, int z){
+        bool is_dug(int x, int y, int z){
             auto idx = coordinates_to_voxel_idx(x,y,z);
             for(auto vx: digged_voxels_){
                 if(vx == idx){

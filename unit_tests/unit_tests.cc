@@ -538,22 +538,33 @@ TEST(TetMeshTest, SetVertexDoesNotAffectOthers) {
     EXPECT_DOUBLE_EQ(m.vertex(v1).z(), 0.0);
 }
 
-TEST(TetMeshTest, IsBoundaryFirstVertex) {
-    EXPECT_FALSE(TetMesh::is_boundary(VertexHandle(0)));
-
-    //NOTE: this is topologically WRONG.
-    // It shows that in our setting, with always one interior vertex,
-    // it's always the first one that is considered interior
-    EXPECT_FALSE(make_single_tet().is_boundary(VertexHandle(0)));
+TEST(TetMeshTest, SingleTetHasNoInteriorVertex) {
+    auto m = make_single_tet();
+    for(int i(0); i<m.n_vertices(); i++) {
+        EXPECT_TRUE(make_single_tet().is_boundary(VertexHandle(i)));
+    }
 }
 
-TEST(TetMeshTest, IsBoundaryOtherVertices) {
-    EXPECT_TRUE(TetMesh::is_boundary(VertexHandle(1)));
-    EXPECT_TRUE(TetMesh::is_boundary(VertexHandle(42)));
-    EXPECT_TRUE(make_single_tet().is_boundary(VertexHandle(1)));
-    EXPECT_TRUE(make_single_tet().is_boundary(VertexHandle(2)));
-    EXPECT_TRUE(make_single_tet().is_boundary(VertexHandle(3)));
+// =============================================================================
+// Boundary
+// =============================================================================
+
+TEST(TetMeshTest, VerticesAreBoundaryByDefault) {
+    TetMesh m;
+    Vec3d p = {0,0,0};
+    auto vh = m.add_vertex(p);
+    EXPECT_TRUE(m.is_boundary(vh));
 }
+
+
+TEST(TetMeshTest, VerticesMustBeExplicitlyMarkedAsInterior) {
+    TetMesh m;
+    Vec3d p = {0,0,0};
+    auto vh = m.add_vertex(p);
+    m.mark_as_interior(vh);
+    EXPECT_FALSE(m.is_boundary(vh));
+}
+
 
 // =============================================================================
 // Cells
@@ -961,15 +972,13 @@ TEST_F(TetMeshBoundaryOvmTest, BoundaryVertexPositionsCorrect) {
 }
 
 TEST_F(TetMeshBoundaryOvmTest, SingleTetBoundaryEdgeCount) {
-    // Single tet boundary: triangle (v1,v2,v3) has 3 edges.
     write_to_file(make_single_tet(), path_, true);
-    EXPECT_NE(read_file(path_).find("Edges\n3\n"), std::string::npos);
+    EXPECT_NE(read_file(path_).find("Edges\n6\n"), std::string::npos);
 }
 
 TEST_F(TetMeshBoundaryOvmTest, SingleTetBoundaryFaceCount) {
-    // Single tet: 1 boundary face (opposite interior vertex).
     write_to_file(make_single_tet(), path_, true);
-    EXPECT_NE(read_file(path_).find("Faces\n1\n"), std::string::npos);
+    EXPECT_NE(read_file(path_).find("Faces\n4\n"), std::string::npos);
 }
 
 TEST_F(TetMeshBoundaryOvmTest, PolyhedraIsZero) {
@@ -1135,9 +1144,9 @@ TEST_F(TetMeshObjTest, BoundaryExportVertexCount) {
 }
 
 TEST_F(TetMeshObjTest, BoundaryExportFaceCount) {
-    // Single tet boundary: 1 face.
+    // Single tet boundary: 4 faces.
     write_to_file(make_single_tet(), path_, true);
-    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "f "), 1);
+    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "f "), 4);
 }
 
 TEST_F(TetMeshObjTest, BoundaryExportInteriorVertexAbsent) {
@@ -1292,6 +1301,15 @@ TEST(VoxelGridMeshGenTest, KnottedHoleExport) {
 // =============================================================================
 
 
+// Helper: expected vertex and cell counts for any rod-topology mesh of length N.
+static int expected_n_vertices(int N) { return (N + 1) * 4 + 1; }
+static int expected_n_cells(int N)    { return 2 * (4 * N + 2); }
+
+
+// -----------------------------------------------------------------------------
+// MinimalNonStarShaped
+// -----------------------------------------------------------------------------
+
 TEST(SimpleMeshGenTest, MinimalNonStarShaped) {
     auto codomain_mesh = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
 
@@ -1304,7 +1322,32 @@ TEST(SimpleMeshGenTest, MinimalNonStarShaped) {
     EXPECT_EQ(domain_mesh.n_vertices(),9);
     EXPECT_EQ(domain_mesh.n_cells(), 12);
     EXPECT_NEAR(domain_mesh.compute_signed_volume(), 32.0/3.0, epsilon);
+
+    write_to_file(codomain_mesh, "min_nss_cod.ovm");
+
+    //only first vertex is interior
+    for(auto vh: codomain_mesh.vertices()) {
+        EXPECT_EQ(codomain_mesh.is_boundary(vh), (bool)vh.idx());
+    }
 }
+
+TEST(SimpleMeshGenTest, MinimalNonStarShapedDomainLargerThanCodomain) {
+    auto codomain = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
+    auto domain   = SimpleMeshGen::generate_minimal_non_star_shaped_domain_mesh();
+    EXPECT_GT(domain.compute_signed_volume(), codomain.compute_signed_volume());
+}
+
+TEST(SimpleMeshGenTest, MinimalNonStarShapedSameTopology) {
+    auto codomain = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
+    auto domain   = SimpleMeshGen::generate_minimal_non_star_shaped_domain_mesh();
+    EXPECT_EQ(codomain.n_vertices(), domain.n_vertices());
+    EXPECT_EQ(codomain.n_cells(),    domain.n_cells());
+}
+
+
+// -----------------------------------------------------------------------------
+// Rod mesh
+// -----------------------------------------------------------------------------
 
 
 TEST(SimpleMeshGenTest, RodMesh) {
@@ -1332,6 +1375,11 @@ TEST(SimpleMeshGenTest, RodMesh) {
         //the last vertex is on the x=N plane
         auto last_v_pos = rod.vertex(VertexHandle(rod.n_vertices()-1));
         EXPECT_EQ(last_v_pos, Vec3d(-0.5,0.5, N));
+
+        //only first vertex is interior
+        for(auto vh: rod.vertices()) {
+            EXPECT_EQ(rod.is_boundary(vh), (bool)vh.idx());
+        }
     }
 }
 
@@ -1354,7 +1402,6 @@ TEST(SimpleMeshGenTest, RodMeshAxialScaling) {
         EXPECT_EQ(last_v_pos, Vec3d(-0.5,0.5, N * s));
     }
 }
-
 
 TEST(SimpleMeshGenTest, RodMeshTorsion) {
 
@@ -1387,38 +1434,6 @@ TEST(SimpleMeshGenTest, RodMeshTorsion) {
     }
 }
 
-
-
-
-// =============================================================================
-// SimpleMeshGen tests
-// =============================================================================
-  
-// Helper: expected vertex and cell counts for any rod-topology mesh of length N.
-static int expected_n_vertices(int N) { return (N + 1) * 4 + 1; }
-static int expected_n_cells(int N)    { return 2 * (4 * N + 2); }
- 
-// -----------------------------------------------------------------------------
-// MinimalNonStarShaped — already covered by the provided tests, add extras
-// -----------------------------------------------------------------------------
- 
-TEST(SimpleMeshGenTest, MinimalNonStarShapedDomainLargerThanCodomain) {
-    auto codomain = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
-    auto domain   = SimpleMeshGen::generate_minimal_non_star_shaped_domain_mesh();
-    EXPECT_GT(domain.compute_signed_volume(), codomain.compute_signed_volume());
-}
- 
-TEST(SimpleMeshGenTest, MinimalNonStarShapedSameTopology) {
-    auto codomain = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
-    auto domain   = SimpleMeshGen::generate_minimal_non_star_shaped_domain_mesh();
-    EXPECT_EQ(codomain.n_vertices(), domain.n_vertices());
-    EXPECT_EQ(codomain.n_cells(),    domain.n_cells());
-}
- 
-// -----------------------------------------------------------------------------
-// Rod mesh
-// -----------------------------------------------------------------------------
- 
 TEST(SimpleMeshGenTest, RodMeshTopologyScalesWithLength) {
     for (int N : {1, 5, 10, 50}) {
         auto rod = SimpleMeshGen::generate_rod_mesh(N);
@@ -1480,11 +1495,14 @@ TEST(SimpleMeshGenTest, SineMeshTopologyScalesWithLength) {
         auto sine = SimpleMeshGen::generate_sine_mesh(N);
         EXPECT_EQ(sine.n_vertices(), expected_n_vertices(N)) << "N=" << N;
         EXPECT_EQ(sine.n_cells(),    expected_n_cells(N))    << "N=" << N;
+
+        //only first vertex is interior
+        for(auto vh: sine.vertices()) {
+            EXPECT_EQ(sine.is_boundary(vh), (bool)vh.idx());
+        }
     }
 }
- 
 
- 
 TEST(SimpleMeshGenTest, SineMeshZeroAmplitudeMatchesRodVolume) {
     // With x_scale=0 and y_scale=0 the sine deformation vanishes.
     // z_scale=1 and torsion=0 → mesh is a straight rod → same volume.
@@ -1511,6 +1529,11 @@ TEST(SimpleMeshGenTest, SpiralMeshTopology) {
     auto spiral = SimpleMeshGen::generate_spiral_mesh(N);
     EXPECT_EQ(spiral.n_vertices(), expected_n_vertices(N));
     EXPECT_EQ(spiral.n_cells(),    expected_n_cells(N));
+
+    //only first vertex is interior
+    for(auto vh: spiral.vertices()) {
+        EXPECT_EQ(spiral.is_boundary(vh), (bool)vh.idx());
+    }
 }
  
 TEST(SimpleMeshGenTest, SpiralMeshTopologyScalesWithLength) {
@@ -1545,6 +1568,11 @@ TEST(SimpleMeshGenTest, TrefoilKnotMeshTopology) {
     auto trefoil = SimpleMeshGen::generate_trefoil_knot_mesh(N, 4 * M_PI, 0.9);
     EXPECT_EQ(trefoil.n_vertices(), expected_n_vertices(N));
     EXPECT_EQ(trefoil.n_cells(),    expected_n_cells(N));
+
+    //only first vertex is interior
+    for(auto vh: trefoil.vertices()) {
+        EXPECT_EQ(trefoil.is_boundary(vh), (bool)vh.idx());
+    }
 }
  
 TEST(SimpleMeshGenTest, TrefoilKnotMeshTopologyScalesWithLength) {
@@ -1600,7 +1628,8 @@ static double xy_norm(const Vec3d& v) {
 // -----------------------------------------------------------------------------
 // circle
 // -----------------------------------------------------------------------------
- 
+
+
 TEST(ParametricCircleTest, AtTZeroReturnsRadiusOnXAxis) {
     Vec3d p = circle({1.0, 0.0}, 0.0);
     EXPECT_NEAR(p.x(), 1.0, curve_epsilon);
@@ -1854,7 +1883,17 @@ static Vec3d curve_point_for_vertex(ParametricCurve curve,
 // -----------------------------------------------------------------------------
 // Topology
 // -----------------------------------------------------------------------------
- 
+
+TEST(ParametricMeshGenTest, FirstVertexIsInterior) {
+    const int length = 10;
+    auto mesh = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0},
+                                                            0.0, 1.0, length, 0.5);
+    //only first vertex is interior
+    for(auto vh: mesh.vertices()) {
+        EXPECT_EQ(mesh.is_boundary(vh), (bool)vh.idx());
+    }
+}
+
 TEST(ParametricMeshGenTest, TopologyMatchesRodMesh) {
     const int length = 10;
     auto mesh = ParametricMeshGen::generate_parametric_mesh(circle, {1.0, 0.0},
@@ -2013,6 +2052,13 @@ static Vec3d flat_plane(const std::vector<double>& p, double u, double v) {
 // generate_layer_mesh — topology
 // -----------------------------------------------------------------------------
 
+TEST(LayerMeshTest, OnlyFirstVertexIsInterior) {
+    auto mesh = SimpleMeshGen::generate_layer_mesh(5, 7);
+    for (auto vh: mesh.vertices()) {
+        EXPECT_EQ(mesh.is_boundary(vh), (bool)vh.idx());
+    }
+}
+
 TEST(LayerMeshTest, VertexCount) {
     for (int u : {2, 3, 4, 10}) {
         for (int v : {2, 3, 4, 10}) {
@@ -2101,7 +2147,12 @@ TEST(ParametricSurfaceMeshTest, TopologyMatchesLayerMesh) {
     auto layer_mesh = SimpleMeshGen::generate_layer_mesh(u,v);
     EXPECT_EQ(mesh.n_vertices(), layer_mesh.n_vertices());
     EXPECT_EQ(mesh.n_cells(),    layer_mesh.n_cells());
+
+    for (auto vh: mesh.vertices()) {
+        EXPECT_EQ(mesh.is_boundary(vh), (bool)vh.idx());
+    }
 }
+
 
 
 TEST(ParametricSurfaceMeshTest, TopologyIndependentOfSurface) {
@@ -2678,13 +2729,13 @@ protected:
         
         write_to_file(mesh_, mesh_name_);
         compare_against_reference(mesh_name_);
-        std::filesystem::remove(mesh_name_);
+        //std::filesystem::remove(mesh_name_);
 
         const std::string mesh_boundary_name =
                 std::filesystem::path(mesh_name_).stem().string() + ".obj";
         write_to_file(mesh_, mesh_boundary_name, true);
         compare_against_reference(mesh_boundary_name);
-        std::filesystem::remove(mesh_boundary_name);
+        //std::filesystem::remove(mesh_boundary_name);
     }
 
     TetMesh mesh_;
