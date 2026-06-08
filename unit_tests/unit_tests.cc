@@ -561,7 +561,9 @@ TEST(TetMeshTest, VerticesMustBeExplicitlyMarkedAsInterior) {
     TetMesh m;
     Vec3d p = {0,0,0};
     auto vh = m.add_vertex(p);
-    m.mark_as_interior(vh);
+    EXPECT_TRUE(m.is_boundary(vh));
+
+    m.mark_as_boundary(vh, false);
     EXPECT_FALSE(m.is_boundary(vh));
 }
 
@@ -2742,6 +2744,11 @@ protected:
     std::string mesh_name_;
 };
 
+
+TEST_F(MeshExportTest, VoxelGrid) {
+    mesh_name_ = "voxel_grid.ovm";
+    mesh_ = VoxelGridMeshGen::generate_voxel_grid_mesh(2,8,16);
+}
 
 TEST_F(MeshExportTest, KnottedHole) {
     mesh_name_ = "knotted_hole.ovm";

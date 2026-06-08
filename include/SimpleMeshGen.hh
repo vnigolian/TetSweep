@@ -35,7 +35,7 @@ namespace tet_weave {
             mesh.add_cell({v5, v6, vt, vi});
             mesh.add_cell({v6, v1, vt, vi});
 
-            mesh.mark_as_interior(vi);
+            mesh.mark_as_boundary(vi, false);
 
             return mesh;
         }
@@ -66,7 +66,7 @@ namespace tet_weave {
             TetMesh mesh;
             //the only interior vertex
             auto v0 = mesh.add_vertex({0.0, 0.0, length * 0.5});
-            mesh.mark_as_interior(v0);
+            mesh.mark_as_boundary(v0, false);
 
             //add vertices
             /* b---c
@@ -330,7 +330,7 @@ namespace tet_weave {
             // Interior vertex at centroid of the grid — added first so it gets index 0.
             // Grid spans [0, u_steps] × [0, v_steps] with z=0.
             auto vi = mesh.add_vertex(u_steps * 0.5, v_steps * 0.5, 0.5);
-            mesh.mark_as_interior(vi);
+            mesh.mark_as_boundary(vi, false);
 
             // Boundary vertices — row-major: vertex(i,j) = 1 + i*(v_steps+1) + j
             for(int k(0); k<2;k++)

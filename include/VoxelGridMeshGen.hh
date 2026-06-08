@@ -78,7 +78,7 @@ namespace tet_weave{
             }
 
             //std::cout<<" generating block..."<<std::endl;
-            generator.tetrahedralize_voxels();
+            generator.tetrahedralize_voxels_and_mark_boundary();
 
             //std::cout<<" generated Furch's ball."<<std::endl;
             //std::cout<<" -> vertices count = "<<generator.mesh_.n_vertices()<<std::endl;
@@ -93,7 +93,7 @@ namespace tet_weave{
             VoxelGridMeshGen generator(width, height, depth);
 
             //std::cout<<" generating block..."<<std::endl;
-            generator.tetrahedralize_voxels();
+            generator.tetrahedralize_voxels_and_mark_boundary();
 
             //std::cout<<" generated voxel grid"<<std::endl;
             //std::cout<<" -> vertices count = "<<generator.mesh_.n_vertices()<<std::endl;
@@ -110,7 +110,7 @@ namespace tet_weave{
 
         VoxelGridMeshGen(int width, int height, int depth) : width_(width), height_(height), depth_(depth){}
 
-        void tetrahedralize_voxels(){
+        void tetrahedralize_voxels_and_mark_boundary(){
 
             //std::cout<<" - generating vertices..."<<std::endl;
             generate_vertices();
@@ -123,6 +123,20 @@ namespace tet_weave{
                         if(!is_dug(x, y, z)){
                             generate_five_tet_voxel(x,y,z, (x+y+z) % 2);
                             voxel_count++;
+                        }else{
+                            /*mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x,  y,  z  )), true);
+                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x+1,y,  z  )), true);
+                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x,  y+1,z  )), true);
+                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x,  y,  z+1)), true);*/
+
+
+                            int i = coordinates_to_corner_vertex_idx(x,  y,  z  );
+                            const int w(width_ + 1), h(height_ + 1), wh(w * h);
+
+                            /*mesh_.mark_as_boundary(VertexHandle(     w     + i), true);
+                            mesh_.mark_as_boundary(VertexHandle(wh + w + 1 + i), true);
+                            mesh_.mark_as_boundary(VertexHandle(wh         + i), true);
+                            mesh_.mark_as_boundary(VertexHandle(wh + w     + i), true);*/
                         }
                     }
                 }
@@ -133,19 +147,21 @@ namespace tet_weave{
 
         void generate_vertices(){
 
-            for(double z(0); z <= depth_; z++){
-                for(double y(0); y <= height_; y++){
-                    for(double x(0); x <= width_; x++){
+            for(int z(0); z <= depth_; z++){
+                for(int y(0); y <= height_; y++){
+                    for(int x(0); x <= width_; x++){
                         auto v = mesh_.add_vertex({x,y,-z});
-                        //std::cout<<" -- added vertex "<<v<<" at "<<mesh_.vertex(v)<<std::endl;
+
+                        mesh_.mark_as_boundary(v, !x || x == width_ ||
+                                                  !y || y == height_ ||
+                                                  !z || z == depth_);
                     }
                 }
             }
         }
 
         /* (x,y,z) = voxel coordinates */
-        void generate_five_tet_voxel(int x, int y, int z,
-                           bool orientation){
+        void generate_five_tet_voxel(int x, int y, int z, bool orientation){
 
             //std::cout<<" -- generating cube at "<<x<<", "<<y<<", "<<z<<" with orientation "<<orientation<<std::endl;
             const int i = coordinates_to_corner_vertex_idx(x,y,z);

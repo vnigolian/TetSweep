@@ -144,8 +144,8 @@ class TetMesh {
             return boundary_v_[vh.idx()];
         }
 
-        void mark_as_interior(const VertexHandle &vh){
-            boundary_v_[vh.idx()] = false;
+        void mark_as_boundary(const VertexHandle &vh, bool boundary_or_interior){
+            boundary_v_[vh.idx()] = boundary_or_interior;
         }
 
         // -------------------------------------------------------------------------
@@ -332,31 +332,43 @@ class TetMesh {
 
         void write_ovm_to_stream(std::ostream& f, bool boundary_only = false) const {
 
+
             const EdgeTable et = build_edge_table(boundary_only);
             const FaceTable ft = build_face_table(boundary_only);
 
             f << "OVM ASCII\n";
 
+            std::vector<int> idx_map(n_vertices());
+            int vidx(0);
             // Vertices — if boundary_only, skip interior vertex (index 0)
             const int n_verts = boundary_only ? n_vertices() - 1 : n_vertices();
             const int v_start = boundary_only ? 1 : 0;
             f << "Vertices\n" << n_verts << "\n";
             for (int i = v_start; i < n_vertices(); ++i) {
-                const Vec3d &v = vertices_[i];
-                f << v.x() << " " << v.y() << " " << v.z() << "\n";
+                if(!boundary_only || is_boundary(VertexHandle(i))) {
+                    const Vec3d &v = vertices_[i];
+                    f << v.x() << " " << v.y() << " " << v.z() << "\n";
+                    idx_map[i] = vidx;
+                    vidx++;
+                    std::cout<<" - vertex "<<i<<" mapped to index "<<idx_map[i]<<std::endl;
+                }
             }
 
             f << "Edges\n" << et.edges.size() << "\n";
-            for (const auto &e: et.edges)
-                f << e[0] << " " << e[1] << "\n";
+            for (const auto &e: et.edges) {
+                f << idx_map[e[0]] << " " << idx_map[e[1]] << "\n";
+            }
+            std::cout<<" edges ok"<<std::endl;
 
             f << "Faces\n" << ft.faces.size() << "\n";
             for (const auto &face: ft.faces) {
-                int he0 = half_edge_idx(et, face[0], face[1]);
-                int he1 = half_edge_idx(et, face[1], face[2]);
-                int he2 = half_edge_idx(et, face[2], face[0]);
+                int he0 = half_edge_idx(et, idx_map[face[0]], idx_map[face[1]]);
+                int he1 = half_edge_idx(et, idx_map[face[1]], idx_map[face[2]]);
+                int he2 = half_edge_idx(et, idx_map[face[2]], idx_map[face[0]]);
                 f << "3 " << he0 << " " << he1 << " " << he2 << "\n";
             }
+
+            std::cout<<" faces ok"<<std::endl;
 
             // Polyhedra — empty for boundary-only export
             f << "Polyhedra\n" << (boundary_only ? 0 : n_cells()) << "\n";
@@ -368,21 +380,27 @@ class TetMesh {
                     f << "\n";
                 }
             }
+            std::cout<<" cells ok"<<std::endl;
         }
 
         void write_obj_to_stream(std::ostream& f, bool boundary_only = false) const {
 
-            const int v_start = boundary_only ? 1 : 0;
-            for (int i = v_start; i < n_vertices(); ++i) {
-                const Vec3d& v = vertices_[i];
-                f << "v " << v.x() << " " << v.y() << " " << v.z() << "\n";
+            std::vector<int> idx_map(n_vertices());
+            int vidx(0);
+            for (int i = 0; i < n_vertices(); ++i) {
+                if(!boundary_only || is_boundary(VertexHandle(i))) {
+                    const Vec3d &v = vertices_[i];
+                    f << "v " << v.x() << " " << v.y() << " " << v.z() << "\n";
+                    idx_map[i] = vidx;
+                    vidx++;
+                }
             }
 
             const FaceTable ft = build_face_table(boundary_only);
             for (const auto& face : ft.faces)
-                f << "f " << face[0] + 1 << " "
-                  << face[1] + 1 << " "
-                  << face[2] + 1 << "\n";
+                f << "f " << idx_map[face[0]] + 1 << " "
+                  << idx_map[face[1]] + 1 << " "
+                  << idx_map[face[2]] + 1 << "\n";
         }
     };
 
