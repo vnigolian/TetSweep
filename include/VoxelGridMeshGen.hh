@@ -133,10 +133,10 @@ namespace tet_weave{
                             int i = coordinates_to_corner_vertex_idx(x,  y,  z  );
                             const int w(width_ + 1), h(height_ + 1), wh(w * h);
 
-                            /*mesh_.mark_as_boundary(VertexHandle(     w     + i), true);
+                            mesh_.mark_as_boundary(VertexHandle(     w     + i), true);
                             mesh_.mark_as_boundary(VertexHandle(wh + w + 1 + i), true);
                             mesh_.mark_as_boundary(VertexHandle(wh         + i), true);
-                            mesh_.mark_as_boundary(VertexHandle(wh + w     + i), true);*/
+                            mesh_.mark_as_boundary(VertexHandle(wh + w     + i), true);
                         }
                     }
                 }

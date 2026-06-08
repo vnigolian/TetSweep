@@ -233,6 +233,13 @@ class TetMesh {
             std::vector<std::array<int, 2>> edges;
             // Map (vs, vt) with vs < vt → edge index.
             std::map<std::array<int, 2>, int> index;
+
+            //counts the number of incident faces and cells.
+            // Used to determine whether it should be exported or not
+            // (for boundary-only exports)
+            // actually not needed, IF meshes are manifold everywhere. I'll leave it here just in case
+            //std::map<std::array<int, 2>, int> f_count;
+            //std::map<std::array<int, 2>, int> c_count;
         };
 
         struct FaceTable {
@@ -240,10 +247,14 @@ class TetMesh {
             std::vector<std::array<int, 3>> faces;
             // Map sorted key → face index.
             std::map<std::array<int, 3>, int> index;
+            //counts the number of incident cells.
+            std::map<std::array<int, 3>, int> c_count;
         };
 
-        EdgeTable build_edge_table(bool boundary_only = false) const {
-            EdgeTable t;
+        EdgeTable build_edge_table(const FaceTable& ft, bool boundary_only = false) const {
+
+            //cell-based version, doesn't take cord edges into account.
+            /*EdgeTable t;
             for (const auto &c: cells_) {
                 for (int i = 0; i < 4; ++i) {
                     if (boundary_only && !is_boundary(c[i])) continue;
@@ -259,23 +270,66 @@ class TetMesh {
                     }
                 }
             }
+            return t;*/
+
+            EdgeTable t;
+            for (const auto &f: ft.faces) {
+                //NOTE: no need to filter based on boundary, because we assume that ft was already filtered
+                for (int i = 0; i < 3; ++i) {
+                    for (int j = i + 1; j < 3; ++j) {
+                        int a = f[i], b = f[j];
+                        if (a > b) std::swap(a, b);
+                        std::array<int, 2> key = {a, b};
+                        if (t.index.find(key) == t.index.end()) {
+                            t.index[key] = static_cast<int>(t.edges.size());
+                            t.edges.push_back(key);
+                        }
+                    }
+                }
+            }
             return t;
+
         }
 
         FaceTable build_face_table(bool boundary_only = false) const {
+            //std::cout<<" building face table"<<std::endl;
             FaceTable t;
+            std::vector<std::array<int,3>> faces;
             for (const auto &c: cells_) {
                 for (const auto &f: kFaceTable) {
-                    if (boundary_only &&
+                    /*if (boundary_only &&
                         (!is_boundary(c[f[0]]) || !is_boundary(c[f[1]]) || !is_boundary(c[f[2]])))
-                        continue;
+                        continue;*/
                     int a = c[f[0]].idx(), b = c[f[1]].idx(), cc = c[f[2]].idx();
                     auto key = face_key(a, b, cc);
+
+                    //std::cout<<" index at key: "<<t.index[key]<<std::endl;
                     if (t.index.find(key) == t.index.end()) {
-                        t.index[key] = static_cast<int>(t.faces.size());
-                        t.faces.push_back({a, b, cc});
+                        t.index[key] = static_cast<int>(faces.size());
+                        faces.push_back({a,b,cc});
+                        t.c_count[key] = 1;
+                        //std::cout<<" - added face "<<key[0]<<", "<<key[1]<<", "<<key[2]<<" to map with index "<<t.index[key]<<" and count "<<t.count[key]<<std::endl;
+                    }else{
+                        t.c_count[key]++;
+                        //std::cout<<" - updated count for face "<<key[0]<<", "<<key[1]<<", "<<key[2]<<" with index "<<t.index[key]<<" to "<<t.count[key]<<std::endl;
                     }
                 }
+            }
+            //std::cout<<" -> found "<<faces.size()<<" faces"<<std::endl;
+
+            //only add faces incident to a single tet if we're only exporting the boundary
+            if(boundary_only){
+                //std::cout<<" - filtering for boundary faces..."<<std::endl;
+                for(const auto& f: faces){
+                    auto key = face_key(f[0], f[1], f[2]);
+                    //std::cout<<" -- count for face with index "<<t.index[key]<<": "<<t.count[key]<<std::endl;
+                    if(t.c_count[key] == 1) {
+                        t.faces.push_back(f);
+                    }
+                }
+                //std::cout<<" - updated face count: "<<t.faces.size()<<std::endl;
+            }else{
+                t.faces = faces;
             }
             return t;
         }
@@ -324,8 +378,8 @@ class TetMesh {
         void write_ovm_to_stream(std::ostream& f, bool boundary_only = false) const {
 
 
-            const EdgeTable et = build_edge_table(boundary_only);
             const FaceTable ft = build_face_table(boundary_only);
+            const EdgeTable et = build_edge_table(ft, boundary_only);
 
             f << "OVM ASCII\n";
 
@@ -355,6 +409,7 @@ class TetMesh {
             }
             //std::cout<<" edges ok"<<std::endl;
 
+            //std::cout<<" -> face count in table: "<<ft.faces.size()<<std::endl;
             f << "Faces\n" << ft.faces.size() << "\n";
             for (const auto &face: ft.faces) {
                 int he0 = half_edge_idx(et, face[0], face[1]);

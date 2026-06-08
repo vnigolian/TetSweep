@@ -416,6 +416,21 @@ static TetMesh make_single_tet() {
     return m;
 }
 
+/// valence-3 edges (surrounded by three tets)
+/// that's a mesh with an edge that connects two boundary vertices, but isn't boundary itself
+static TetMesh make_tri_tet() {
+    TetMesh m;
+    auto v0 = m.add_vertex(0,   0,    0);
+    auto v1 = m.add_vertex(1,   0,    0);
+    auto v2 = m.add_vertex(0.5, 1,    0);
+    auto vb = m.add_vertex(0.5, 0.5, -1);
+    auto vt = m.add_vertex(0.5, 0.5,  1);
+    m.add_cell(v0, v1, vb, vt);
+    m.add_cell(v1, v2, vb, vt);
+    m.add_cell(v2, v0, vb, vt);
+    return m;
+}
+
 
 // Unit regular tetrahedron with volume exactly 1.0.
 // Edge length a = (6*sqrt(2))^(1/3) ≈ 2.0, placed so v0 is at origin.
@@ -538,12 +553,7 @@ TEST(TetMeshTest, SetVertexDoesNotAffectOthers) {
     EXPECT_DOUBLE_EQ(m.vertex(v1).z(), 0.0);
 }
 
-TEST(TetMeshTest, SingleTetHasNoInteriorVertex) {
-    auto m = make_single_tet();
-    for(int i(0); i<m.n_vertices(); i++) {
-        EXPECT_TRUE(make_single_tet().is_boundary(VertexHandle(i)));
-    }
-}
+
 
 // =============================================================================
 // Boundary
@@ -567,6 +577,26 @@ TEST(TetMeshTest, VerticesMustBeExplicitlyMarkedAsInterior) {
     EXPECT_FALSE(m.is_boundary(vh));
 }
 
+
+TEST(TetMeshTest, SingleTetHasNoInteriorVertex) {
+    auto m = make_single_tet();
+    for(int i(0); i<m.n_vertices(); i++) {
+        EXPECT_TRUE(m.is_boundary(VertexHandle(i)));
+    }
+}
+
+TEST(TetMeshTest, TriTetTopology) {
+    auto m = make_tri_tet();
+    EXPECT_EQ(m.n_vertices(), 5);
+    EXPECT_EQ(m.n_cells(), 3);
+}
+
+TEST(TetMeshTest, TriTetHasNoInteriorVertex) {
+    auto m = make_tri_tet();
+    for(int i(0); i<m.n_vertices(); i++) {
+        EXPECT_TRUE(m.is_boundary(VertexHandle(i)));
+    }
+}
 
 // =============================================================================
 // Cells
@@ -961,6 +991,21 @@ TEST_F(TetMeshBoundaryOvmTest, InteriorVertexSkipped) {
     write_to_file(make_single_tet(), path_, true);
     EXPECT_NE(read_file(path_).find("Vertices\n3\n"), std::string::npos);
 }
+
+
+TEST_F(TetMeshBoundaryOvmTest, InteriorEdgeAndFacesSkipped) {
+    write_to_file(make_tri_tet(), path_, true);
+    EXPECT_NE(read_file(path_).find("Vertices\n5\n"), std::string::npos);
+    EXPECT_NE(read_file(path_).find("Edges\n9\n"), std::string::npos);
+    EXPECT_NE(read_file(path_).find("Faces\n6\n"), std::string::npos);
+
+    write_to_file(make_tri_tet(), "tri_tet.ovm", false);
+    write_to_file(make_tri_tet(), "tri_tet.obj", false);
+    write_to_file(make_tri_tet(), "tri_tet_boundary.ovm", true);
+    write_to_file(make_tri_tet(), "tri_tet_boundary.obj", true);
+    exit(EXIT_FAILURE);
+}
+
 
 TEST_F(TetMeshBoundaryOvmTest, BoundaryVertexPositionsCorrect) {
     // v1=(1,0,0), v2=(0,1,0), v3=(0,0,1) remapped to indices 0,1,2
@@ -2712,8 +2757,8 @@ protected:
 
 
 TEST_F(MeshExportTest, VoxelGrid) {
-    mesh_name_ = "voxel_grid.ovm";
-    mesh_ = VoxelGridMeshGen::generate_voxel_grid_mesh(2,4,8);
+    mesh_name_ = "voxel_grid.obj";
+    mesh_ = VoxelGridMeshGen::generate_voxel_grid_mesh(2,2,2);
 }
 
 TEST_F(MeshExportTest, KnottedHole) {
@@ -2724,6 +2769,7 @@ TEST_F(MeshExportTest, KnottedHole) {
 
 TEST_F(MeshExportTest, MinimalNonStarShaped) {
 
+    exit(EXIT_FAILURE);
     auto codomain_mesh = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
     std::string codomain_mesh_name = "min_non_star_shaped_codomain.ovm";
     write_to_file(codomain_mesh, codomain_mesh_name);
