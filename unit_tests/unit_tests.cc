@@ -2757,7 +2757,7 @@ class MeshExportTest : public ::testing::Test {
 protected:
     void TearDown() override {
         if (HasFatalFailure()) return;
-        if(mesh_name_ == "") return;
+        if(mesh_name_.empty()) return;
         
         write_to_file(mesh_, mesh_name_);
         compare_against_reference(mesh_name_);
@@ -2777,13 +2777,9 @@ protected:
 
 TEST_F(MeshExportTest, VoxelGrid) {
     mesh_name_ = "voxel_grid.ovm";
-    mesh_ = VoxelGridMeshGen::generate_voxel_grid_mesh(2,2,2);
-
-    write_to_file(mesh_, "voxel_grid.ovm", false);
-    write_to_file(mesh_, "voxel_grid.obj", false);
-    write_to_file(mesh_, "voxel_grid_boundary.ovm", true);
-    write_to_file(mesh_, "voxel_grid_boundary.obj", true);
+    mesh_ = VoxelGridMeshGen::generate_voxel_grid_mesh(2,4,8);
 }
+
 
 TEST_F(MeshExportTest, KnottedHole) {
     mesh_name_ = "knotted_hole.ovm";
@@ -2793,7 +2789,6 @@ TEST_F(MeshExportTest, KnottedHole) {
 
 TEST_F(MeshExportTest, MinimalNonStarShaped) {
 
-    exit(EXIT_FAILURE);
     auto codomain_mesh = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
     std::string codomain_mesh_name = "min_non_star_shaped_codomain.ovm";
     write_to_file(codomain_mesh, codomain_mesh_name);
@@ -2821,7 +2816,6 @@ TEST_F(MeshExportTest, SpiralMesh) {
     const int N(60);
     mesh_ = SimpleMeshGen::generate_spiral_mesh(N, 2*M_PI, 10.0, 5.0);
     mesh_name_ = "spiral.ovm";
-
 }
 
 
@@ -2886,7 +2880,6 @@ TEST_F(MeshExportTest, Sine3d) {
                                                               0.0, 2 * M_PI, N, //v range 
                                                               0.2); //thickness
     mesh_name_ = "sine3d.ovm";
-
 }
 
 

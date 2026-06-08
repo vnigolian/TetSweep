@@ -77,12 +77,7 @@ namespace tet_weave{
                 }
             }
 
-            //std::cout<<" generating block..."<<std::endl;
             generator.tetrahedralize_voxels_and_mark_boundary();
-
-            //std::cout<<" generated Furch's ball."<<std::endl;
-            //std::cout<<" -> vertices count = "<<generator.mesh_.n_vertices()<<std::endl;
-            //std::cout<<" ->    cells count = "<<generator.mesh_.n_cells()<<std::endl;
 
             return generator.mesh_;
         }
@@ -92,14 +87,7 @@ namespace tet_weave{
 
             VoxelGridMeshGen generator(width, height, depth);
 
-            //std::cout<<" generating block..."<<std::endl;
             generator.tetrahedralize_voxels_and_mark_boundary();
-
-            //std::cout<<" generated voxel grid"<<std::endl;
-            //std::cout<<" -> vertices count = "<<generator.mesh_.n_vertices()<<std::endl;
-            //std::cout<<" ->    edges count = "<<generator.mesh_.n_edges()<<std::endl;
-            //std::cout<<" ->    faces count = "<<generator.mesh_.n_faces()<<std::endl;
-            //std::cout<<" ->    cells count = "<<generator.mesh_.n_cells()<<std::endl;
 
             return generator.mesh_;
         }
@@ -124,19 +112,14 @@ namespace tet_weave{
                             generate_five_tet_voxel(x,y,z, (x+y+z) % 2);
                             voxel_count++;
                         }else{
-                            /*mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x,  y,  z  )), true);
-                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x+1,y,  z  )), true);
+                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x,  y,  z  )), true);
+                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x,  y,  z+1)), true);
                             mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x,  y+1,z  )), true);
-                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x,  y,  z+1)), true);*/
-
-
-                            int i = coordinates_to_corner_vertex_idx(x,  y,  z  );
-                            const int w(width_ + 1), h(height_ + 1), wh(w * h);
-
-                            mesh_.mark_as_boundary(VertexHandle(     w     + i), true);
-                            mesh_.mark_as_boundary(VertexHandle(wh + w + 1 + i), true);
-                            mesh_.mark_as_boundary(VertexHandle(wh         + i), true);
-                            mesh_.mark_as_boundary(VertexHandle(wh + w     + i), true);
+                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x,  y+1,z+1)), true);
+                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x+1,y,  z  )), true);
+                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x+1,y,  z+1)), true);
+                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x+1,y+1,z  )), true);
+                            mesh_.mark_as_boundary(VertexHandle(coordinates_to_corner_vertex_idx(x+1,y+1,z+1)), true);
                         }
                     }
                 }

@@ -401,7 +401,6 @@ class TetMesh {
                 }
                 //std::cout<<" - "<<(is_boundary(VertexHandle(i)) ? "boundary" : "interior") << " vertex "<<i<<" mapped to index "<<idx_map[i]<<std::endl;
             }
-            //std::cout<<" index map size: "<<idx_map.size()<<std::endl;
 
             //then second pass to write to stream
             f << "Vertices\n" << vidx << "\n";
@@ -455,12 +454,18 @@ class TetMesh {
                     vidx++;
                 }
             }
+            //std::cout<<" index map size: "<<idx_map.size()<<std::endl;
+            //std::cout<<" -> found "<<vidx<<" boundary vertices"<<std::endl;
 
             const FaceTable ft = build_face_table(boundary_only);
-            for (const auto& face : ft.faces)
+            int written_count(0);
+            for (const auto& face : ft.faces) {
                 f << "f " << idx_map[face[0]] + 1 << " "
                   << idx_map[face[1]] + 1 << " "
                   << idx_map[face[2]] + 1 << "\n";
+                written_count++;
+            }
+            //std::cout<<" -> wrote "<<written_count<<" faces"<<std::endl;
         }
     };
 
