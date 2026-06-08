@@ -11,7 +11,7 @@ An online viewer and generator is available [here](https://vnigolian.github.io/T
 
 # TODOS
 * fix boundary stuff for KH
-* finalise readme (renders)
+* finalise readme (review and improve)
 
 
 ## Building
