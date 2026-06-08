@@ -876,7 +876,6 @@ protected:
 TEST_F(TetMeshOvmTest, FileIsCreated) {
     write_to_file(make_single_tet(), path_);
     EXPECT_TRUE(std::filesystem::exists(path_));
-    write_to_file(make_single_tet(), "test.ovm");
 }
 
 TEST_F(TetMeshOvmTest, HeaderPresent) {
@@ -1354,8 +1353,6 @@ TEST(SimpleMeshGenTest, MinimalNonStarShaped) {
     EXPECT_EQ(domain_mesh.n_vertices(),9);
     EXPECT_EQ(domain_mesh.n_cells(), 12);
     EXPECT_NEAR(domain_mesh.compute_signed_volume(), 32.0/3.0, epsilon);
-
-    write_to_file(codomain_mesh, "min_nss_cod.ovm");
 
     //only first vertex is interior
     for(auto vh: codomain_mesh.vertices()) {
@@ -2250,10 +2247,12 @@ TEST(ParametricSurfaceMeshTest, DifferentSurfacesGiveDifferentVolumes) {
 }
 
 TEST(ParametricSurfaceMeshTest, SmokeTestWritesToFile) {
+    std::string mesh_name = "test_surface.ovm";
     auto mesh = ParametricMeshGen::generate_parametric_mesh(
             torus, {2.0, 0.5}, 0.0, 2*M_PI, 10, 0.0, 2*M_PI, 10, 0.1);
-    write_to_file(mesh, "test_surface.ovm");
-    EXPECT_TRUE(std::filesystem::exists("test_surface.ovm"));
+    write_to_file(mesh, mesh_name);
+    EXPECT_TRUE(std::filesystem::exists(mesh_name));
+    std::filesystem::remove(mesh_name);
 }
 
 // =============================================================================
@@ -2761,13 +2760,13 @@ protected:
         
         write_to_file(mesh_, mesh_name_);
         compare_against_reference(mesh_name_);
-        //std::filesystem::remove(mesh_name_);
+        std::filesystem::remove(mesh_name_);
 
         const std::string mesh_boundary_name =
                 std::filesystem::path(mesh_name_).stem().string() + ".obj";
         write_to_file(mesh_, mesh_boundary_name, true);
         compare_against_reference(mesh_boundary_name);
-        //std::filesystem::remove(mesh_boundary_name);
+        std::filesystem::remove(mesh_boundary_name);
     }
 
     TetMesh mesh_;
@@ -2953,43 +2952,52 @@ protected:
         ASSERT_TRUE(std::filesystem::exists(CLI_BINARY_PATH))<< "CLI binary not found at: " << CLI_BINARY_PATH
                                                              << " — make sure the tet_weave target is built";
     }
+
+    void TearDown() override{
+
+        compare_against_reference(mesh_name_);
+        std::filesystem::remove(mesh_name_);
+    }
+
+    std::string mesh_name_;
 };
 
 TEST_F(CliTest, SineMesh) {
 
+    mesh_name_ = "sine.ovm";
     ASSERT_EQ(run_cli(" --mesh-type sine"
                       " --length 50"
                       " --axial-scaling " + to_full_double(5.0/50) +
                       " --torsion-rad " + to_full_double(M_PI/2.0) +
                       " --sine-period 2.0"
                       " --sine-amplitude 2.0"
-                      " --output sine.ovm"), 0);
-    compare_against_reference("sine.ovm");
-    std::filesystem::remove("sine.ovm");
+                      " --output "+mesh_name_), 0);
 }
 
 TEST_F(CliTest, SpiralMesh) {
+
+    mesh_name_ = "spiral.ovm";
     ASSERT_EQ(run_cli(" --mesh-type spiral"
                       " --length 60"
                       " --torsion-rad " + to_full_double(2*M_PI) +
                       " --spiral-x-scale 10.0"
                       " --spiral-turn-count 5.0"
-                      " --output spiral.ovm"), 0);
-    compare_against_reference("spiral.ovm");
-    std::filesystem::remove("spiral.ovm");
+                      " --output "+mesh_name_), 0);
 }
 
 TEST_F(CliTest, TrefoilKnotMesh) {
+
+    mesh_name_ = "trefoil.ovm";
     ASSERT_EQ(run_cli(" --mesh-type trefoil-knot"
                       " --length 100"
                       " --torsion-rad " + to_full_double(4*M_PI) + " "
                       " --trefoil-range 0.9 "
-                      " --output trefoil.ovm"), 0);
-    compare_against_reference("trefoil.ovm");
-    std::filesystem::remove("trefoil.ovm");
+                      " --output "+mesh_name_), 0);
 }
 
 TEST_F(CliTest, Sine3d) {
+
+    mesh_name_ = "sine3d.ovm";
     ASSERT_EQ(run_cli(" --mesh-type para-sine3d"
                       " --para-args 2.0 2.0"
                       " --para-u 0.0 " + to_full_double(2*M_PI) +
@@ -2997,12 +3005,12 @@ TEST_F(CliTest, Sine3d) {
                       " --width 60"
                       " --height 40"
                       " --para-thickness 0.2 "
-                      " --output sine3d.ovm"), 0);
-    compare_against_reference("sine3d.ovm");
-    std::filesystem::remove("sine3d.ovm");
+                      " --output "+mesh_name_), 0);
 }
 
 TEST_F(CliTest, SpherePatch) {
+
+    mesh_name_ = "sphere.ovm";
     ASSERT_EQ(run_cli(" --mesh-type para-sphere"
                       " --para-args 2.0"
                       " --para-u " + to_full_double(0.1*M_PI) + " " + to_full_double(0.75*M_PI) +
@@ -3010,12 +3018,12 @@ TEST_F(CliTest, SpherePatch) {
                       " --width 10"
                       " --height 20"
                       " --para-thickness 0.2"
-                      " --output sphere.ovm"), 0);
-    compare_against_reference("sphere.ovm");
-    std::filesystem::remove("sphere.ovm");
+                      " --output "+mesh_name_), 0);
 }
 
 TEST_F(CliTest, HelicoidalRing) {
+
+    mesh_name_ = "helicoidal_ring.ovm";
     ASSERT_EQ(run_cli(" --mesh-type para-helicoidal-ring"
                       " --para-args 10.0"
                       " --para-u 0.0 0.5"
@@ -3023,21 +3031,19 @@ TEST_F(CliTest, HelicoidalRing) {
                       " --width 10"
                       " --height 200"
                       " --para-thickness 0.2"
-                      " --output helicoidal_ring.ovm"), 0);
-    compare_against_reference("helicoidal_ring.ovm");
-    std::filesystem::remove("helicoidal_ring.ovm");
+                      " --output "+mesh_name_), 0);
 }
 
 TEST_F(CliTest, Torus) {
+
+    mesh_name_ = "torus.ovm";
     ASSERT_EQ(run_cli(" --mesh-type para-torus --para-args 4.0 1.0 "
                       " --para-u 0.0 " + to_full_double(1.5*M_PI) +
                       " --para-v 0.0 " + to_full_double(1.5*M_PI) +
                       " --width 10 "
                       " --height 6 "
                       " --para-thickness 0.2"
-                      " --output torus.ovm"), 0);
-    compare_against_reference("torus.ovm");
-    std::filesystem::remove("torus.ovm");
+                      " --output "+mesh_name_), 0);
 }
 
 
