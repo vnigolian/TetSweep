@@ -378,6 +378,7 @@ class TetMesh {
         void write_ovm_to_stream(std::ostream& f, bool boundary_only = false) const {
 
 
+            //std::cout<<" ------------------- exporting to .ovm, boundary only: "<<boundary_only<<std::endl;
             const FaceTable ft = build_face_table(boundary_only);
             const EdgeTable et = build_edge_table(ft, boundary_only);
 
@@ -386,13 +387,13 @@ class TetMesh {
             std::vector<int> idx_map(n_vertices());
             int vidx(0);
             // Vertices — if boundary_only, skip interior vertex (index 0)
-            const int n_verts = boundary_only ? n_vertices() - 1 : n_vertices();
-            const int v_start = boundary_only ? 1 : 0;
-            f << "Vertices\n" << n_verts << "\n";
-            for (int i = v_start; i < n_vertices(); ++i) {
+            //const int n_verts = boundary_only ? n_vertices() - 1 : n_vertices();
+            //const int v_start = boundary_only ? 1 : 0;
+
+            //first pass for map setup
+            for (int i = 0; i < n_vertices(); ++i) {
                 if(!boundary_only || is_boundary(VertexHandle(i))) {
                     const Vec3d &v = vertices_[i];
-                    f << v.x() << " " << v.y() << " " << v.z() << "\n";
                     idx_map[i] = vidx;
                     vidx++;
                 }else{
@@ -401,6 +402,15 @@ class TetMesh {
                 //std::cout<<" - "<<(is_boundary(VertexHandle(i)) ? "boundary" : "interior") << " vertex "<<i<<" mapped to index "<<idx_map[i]<<std::endl;
             }
             //std::cout<<" index map size: "<<idx_map.size()<<std::endl;
+
+            //then second pass to write to stream
+            f << "Vertices\n" << vidx << "\n";
+            for (int i = 0; i < n_vertices(); ++i) {
+                if(idx_map[i] >= 0) {
+                    const Vec3d &v = vertices_[i];
+                    f << v.x() << " " << v.y() << " " << v.z() << "\n";
+                }
+            }
 
             f << "Edges\n" << et.edges.size() << "\n";
             for (const auto &e: et.edges) {

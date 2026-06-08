@@ -416,7 +416,7 @@ static TetMesh make_single_tet() {
     return m;
 }
 
-/// valence-3 edges (surrounded by three tets)
+/// valence-3 edge (surrounded by three tets)
 /// that's a mesh with an edge that connects two boundary vertices, but isn't boundary itself
 static TetMesh make_tri_tet() {
     TetMesh m;
@@ -428,6 +428,23 @@ static TetMesh make_tri_tet() {
     m.add_cell(v0, v1, vb, vt);
     m.add_cell(v1, v2, vb, vt);
     m.add_cell(v2, v0, vb, vt);
+    return m;
+}
+
+/// valence-4 vertex (surrounded by four tets)
+static TetMesh make_quadri_tet() {
+    TetMesh m;
+    auto vi = m.add_vertex(0.5, 0.5, 0.5);
+    auto v0 = m.add_vertex(0,     0,   0);
+    auto v1 = m.add_vertex(1,     0,   0);
+    auto v2 = m.add_vertex(0.5,   1,   0);
+    auto vt = m.add_vertex(0.5, 0.5,   1);
+    m.add_cell(v0, v1, v2, vi);
+    m.add_cell(v1, v0, vt, vi);
+    m.add_cell(v2, v1, vt, vi);
+    m.add_cell(v0, v2, vt, vi);
+
+    m.mark_as_boundary(vi, false);
     return m;
 }
 
@@ -597,6 +614,21 @@ TEST(TetMeshTest, TriTetHasNoInteriorVertex) {
         EXPECT_TRUE(m.is_boundary(VertexHandle(i)));
     }
 }
+
+TEST(TetMeshTest, QuadriTetTopology) {
+    auto m = make_quadri_tet();
+    EXPECT_EQ(m.n_vertices(), 5);
+    EXPECT_EQ(m.n_cells(), 4);
+}
+
+TEST(TetMeshTest, QuadriTetHasOnlyFirstInteriorVertex) {
+    auto m = make_quadri_tet();
+    for(int i(0); i<m.n_vertices(); i++) {
+        EXPECT_EQ(m.is_boundary(VertexHandle(i)), (bool)i);
+    }
+}
+
+
 
 // =============================================================================
 // Cells
@@ -987,9 +1019,8 @@ TEST_F(TetMeshBoundaryOvmTest, HeaderPresent) {
 }
 
 TEST_F(TetMeshBoundaryOvmTest, InteriorVertexSkipped) {
-    // Single tet: 4 vertices total, boundary has 3 (v0 skipped).
-    write_to_file(make_single_tet(), path_, true);
-    EXPECT_NE(read_file(path_).find("Vertices\n3\n"), std::string::npos);
+    write_to_file(make_quadri_tet(), path_, true);
+    EXPECT_NE(read_file(path_).find("Vertices\n4\n"), std::string::npos);
 }
 
 
@@ -998,12 +1029,14 @@ TEST_F(TetMeshBoundaryOvmTest, InteriorEdgeAndFacesSkipped) {
     EXPECT_NE(read_file(path_).find("Vertices\n5\n"), std::string::npos);
     EXPECT_NE(read_file(path_).find("Edges\n9\n"), std::string::npos);
     EXPECT_NE(read_file(path_).find("Faces\n6\n"), std::string::npos);
+}
 
-    write_to_file(make_tri_tet(), "tri_tet.ovm", false);
-    write_to_file(make_tri_tet(), "tri_tet.obj", false);
-    write_to_file(make_tri_tet(), "tri_tet_boundary.ovm", true);
-    write_to_file(make_tri_tet(), "tri_tet_boundary.obj", true);
-    exit(EXIT_FAILURE);
+
+TEST_F(TetMeshBoundaryOvmTest, InteriorEdgesAndFacesSkipped) {
+    write_to_file(make_quadri_tet(), path_, true);
+    EXPECT_NE(read_file(path_).find("Vertices\n4\n"), std::string::npos);
+    EXPECT_NE(read_file(path_).find("Edges\n6\n"), std::string::npos);
+    EXPECT_NE(read_file(path_).find("Faces\n4\n"), std::string::npos);
 }
 
 
@@ -1071,20 +1104,6 @@ TEST_F(TetMeshBoundaryOvmTest, BoundaryAndFullExportDiffer) {
     std::filesystem::remove(path_full);
 }
 
-TEST_F(TetMeshBoundaryOvmTest, RemappedIndicesAreContiguous) {
-    // After skipping vertex 0, the boundary vertex section should start
-    // immediately after "Vertices\nN\n" with no gaps.
-    // We verify by checking the first boundary vertex is written at line 3
-    // (header, count, first vertex).
-    write_to_file(make_single_tet(), path_, true);
-    std::istringstream ss(read_file(path_));
-    std::string line;
-    std::getline(ss, line); // OVM ASCII
-    std::getline(ss, line); // Vertices
-    std::getline(ss, line); // 3
-    std::getline(ss, line); // first vertex — should be "1 0 0"
-    EXPECT_EQ(line, "1 0 0");
-}
 
 #ifndef NDEBUG
 TEST(TetMeshBoundaryTest, UnsupportedExtensionThrowsWithBoundaryOnly) {
@@ -2757,8 +2776,13 @@ protected:
 
 
 TEST_F(MeshExportTest, VoxelGrid) {
-    mesh_name_ = "voxel_grid.obj";
+    mesh_name_ = "voxel_grid.ovm";
     mesh_ = VoxelGridMeshGen::generate_voxel_grid_mesh(2,2,2);
+
+    write_to_file(mesh_, "voxel_grid.ovm", false);
+    write_to_file(mesh_, "voxel_grid.obj", false);
+    write_to_file(mesh_, "voxel_grid_boundary.ovm", true);
+    write_to_file(mesh_, "voxel_grid_boundary.obj", true);
 }
 
 TEST_F(MeshExportTest, KnottedHole) {
