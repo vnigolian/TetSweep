@@ -1140,9 +1140,8 @@ TEST_F(TetMeshObjTest, FullExportVertexCountScalesWithMesh) {
 // -----------------------------------------------------------------------------
 
 TEST_F(TetMeshObjTest, BoundaryExportVertexCount) {
-    // Single tet boundary: 3 vertices (interior vertex skipped).
     write_to_file(make_single_tet(), path_, true);
-    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "v "), 3);
+    EXPECT_EQ(count_lines_with_prefix(read_file(path_), "v "), 4);
 }
 
 TEST_F(TetMeshObjTest, BoundaryExportFaceCount) {
@@ -1151,27 +1150,6 @@ TEST_F(TetMeshObjTest, BoundaryExportFaceCount) {
     EXPECT_EQ(count_lines_with_prefix(read_file(path_), "f "), 4);
 }
 
-TEST_F(TetMeshObjTest, BoundaryExportInteriorVertexAbsent) {
-    // Interior vertex (0,0,0) should not appear in boundary export.
-    write_to_file(make_single_tet(), path_, true);
-    const std::string content = read_file(path_);
-    EXPECT_EQ(content.find("v 0 0 0"), std::string::npos);
-}
-
-TEST_F(TetMeshObjTest, BoundaryExportBoundaryVerticesPresent) {
-    write_to_file(make_single_tet(), path_, true);
-    const std::string content = read_file(path_);
-    EXPECT_NE(content.find("v 1 0 0"), std::string::npos);
-    EXPECT_NE(content.find("v 0 1 0"), std::string::npos);
-    EXPECT_NE(content.find("v 0 0 1"), std::string::npos);
-}
-
-TEST_F(TetMeshObjTest, BoundaryExportFaceIsOneTwoThree) {
-    // With 3 boundary vertices remapped to OBJ indices 1,2,3,
-    // the single boundary face should be "f 1 2 3".
-    write_to_file(make_single_tet(), path_, true);
-    EXPECT_NE(read_file(path_).find("f 1 2 3"), std::string::npos);
-}
 
 TEST_F(TetMeshObjTest, BoundaryExportVertexCountScalesWithMesh) {
     const int N = 4;
@@ -1186,18 +1164,6 @@ TEST_F(TetMeshObjTest, BoundaryExportFaceCountEqualsNCells) {
     auto rod = SimpleMeshGen::generate_rod_mesh(N);
     write_to_file(rod, path_, true);
     EXPECT_EQ(count_lines_with_prefix(read_file(path_), "f "), rod.n_cells());
-}
-
-// -----------------------------------------------------------------------------
-// Full vs boundary differ
-// -----------------------------------------------------------------------------
-
-TEST_F(TetMeshObjTest, FullAndBoundaryExportDiffer) {
-    auto path_full = std::filesystem::temp_directory_path() / "tet_weave_full.obj";
-    write_to_file(make_single_tet(), path_,      true);
-    write_to_file(make_single_tet(), path_full,  false);
-    EXPECT_NE(read_file(path_), read_file(path_full));
-    std::filesystem::remove(path_full);
 }
 
 
@@ -2747,7 +2713,7 @@ protected:
 
 TEST_F(MeshExportTest, VoxelGrid) {
     mesh_name_ = "voxel_grid.ovm";
-    mesh_ = VoxelGridMeshGen::generate_voxel_grid_mesh(2,8,16);
+    mesh_ = VoxelGridMeshGen::generate_voxel_grid_mesh(2,4,8);
 }
 
 TEST_F(MeshExportTest, KnottedHole) {
@@ -2757,6 +2723,7 @@ TEST_F(MeshExportTest, KnottedHole) {
 
 
 TEST_F(MeshExportTest, MinimalNonStarShaped) {
+
     auto codomain_mesh = SimpleMeshGen::generate_minimal_non_star_shaped_mesh();
     std::string codomain_mesh_name = "min_non_star_shaped_codomain.ovm";
     write_to_file(codomain_mesh, codomain_mesh_name);

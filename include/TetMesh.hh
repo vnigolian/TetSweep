@@ -250,10 +250,6 @@ class TetMesh {
                     for (int j = i + 1; j < 4; ++j) {
                         if (boundary_only && !is_boundary(c[j])) continue;
                         int a = c[i].idx(), b = c[j].idx();
-                        if (boundary_only) {
-                            a -= 1;
-                            b -= 1;
-                        }
                         if (a > b) std::swap(a, b);
                         std::array<int, 2> key = {a, b};
                         if (t.index.find(key) == t.index.end()) {
@@ -274,11 +270,6 @@ class TetMesh {
                         (!is_boundary(c[f[0]]) || !is_boundary(c[f[1]]) || !is_boundary(c[f[2]])))
                         continue;
                     int a = c[f[0]].idx(), b = c[f[1]].idx(), cc = c[f[2]].idx();
-                    if (boundary_only) {
-                        a -= 1;
-                        b -= 1;
-                        cc -= 1;
-                    }
                     auto key = face_key(a, b, cc);
                     if (t.index.find(key) == t.index.end()) {
                         t.index[key] = static_cast<int>(t.faces.size());
@@ -350,25 +341,29 @@ class TetMesh {
                     f << v.x() << " " << v.y() << " " << v.z() << "\n";
                     idx_map[i] = vidx;
                     vidx++;
-                    std::cout<<" - vertex "<<i<<" mapped to index "<<idx_map[i]<<std::endl;
+                }else{
+                    idx_map[i] = -1;
                 }
+                //std::cout<<" - "<<(is_boundary(VertexHandle(i)) ? "boundary" : "interior") << " vertex "<<i<<" mapped to index "<<idx_map[i]<<std::endl;
             }
+            //std::cout<<" index map size: "<<idx_map.size()<<std::endl;
 
             f << "Edges\n" << et.edges.size() << "\n";
             for (const auto &e: et.edges) {
+                //std::cout<<" - plain edge: "<<e[0]<<", "<<e[1]<<std::endl;
                 f << idx_map[e[0]] << " " << idx_map[e[1]] << "\n";
             }
-            std::cout<<" edges ok"<<std::endl;
+            //std::cout<<" edges ok"<<std::endl;
 
             f << "Faces\n" << ft.faces.size() << "\n";
             for (const auto &face: ft.faces) {
-                int he0 = half_edge_idx(et, idx_map[face[0]], idx_map[face[1]]);
-                int he1 = half_edge_idx(et, idx_map[face[1]], idx_map[face[2]]);
-                int he2 = half_edge_idx(et, idx_map[face[2]], idx_map[face[0]]);
+                int he0 = half_edge_idx(et, face[0], face[1]);
+                int he1 = half_edge_idx(et, face[1], face[2]);
+                int he2 = half_edge_idx(et, face[2], face[0]);
                 f << "3 " << he0 << " " << he1 << " " << he2 << "\n";
             }
 
-            std::cout<<" faces ok"<<std::endl;
+            //std::cout<<" faces ok"<<std::endl;
 
             // Polyhedra — empty for boundary-only export
             f << "Polyhedra\n" << (boundary_only ? 0 : n_cells()) << "\n";
@@ -380,7 +375,7 @@ class TetMesh {
                     f << "\n";
                 }
             }
-            std::cout<<" cells ok"<<std::endl;
+            //std::cout<<" cells ok"<<std::endl;
         }
 
         void write_obj_to_stream(std::ostream& f, bool boundary_only = false) const {
