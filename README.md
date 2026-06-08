@@ -2,17 +2,16 @@
 
 ![CI](https://github.com/vnigolian/TetWeave/actions/workflows/ci.yml/badge.svg)
 
-A lightweight header-only C++ library for generating tetrahedral meshes from parametric curves and surfaces, without any dependencies.
+A lightweight header-only C++ library for generating tetrahedral meshes, mostly from parametric curves and surfaces, without any dependencies.
+Its main purpose is to generate stress-test cases for deformation and volumetric mapping methods.
+e.g. using a [rod](#rod_fig) mesh as a domain/source mesh, and a [sine](#sine_fig) mesh as codomain/target.
 
-It can be used with the provided cli to generate meshes (either in `.obj` or `.ovm` formats), or integrated into other libraries (cf. `minimal_example/`).
+Meshes can be generated as files (either in `.obj` or `.ovm` formats) using the provided cli, or integrated into other libraries (cf. `minimal_example/`).
 
 An online viewer and generator is available [here](https://vnigolian.github.io/TetWeave/).
 
-
-# TODOS
-* fix boundary stuff for KH
-* finalise readme (review and improve)
-
+## Contributing
+Feel free to contact me with new meshes or improvement suggestions, or directly make PRs.
 
 ## Building
 
@@ -34,6 +33,8 @@ Run `./cli/tet_weave --help` for the full list of options.
 
 ## Mesh Types
 
+**IMPORTANT**: Aside from the Voxel Grid meshes, all meshes have a **single interior vertex**. The pictures below showcase the meshes' boundary.
+
 ### Voxel Grid Meshes
 
 | Mesh Type | Preview | Arguments | Notes |
@@ -49,8 +50,8 @@ Run `./cli/tet_weave --help` for the full list of options.
 |----------------------------------|----------------------------------------------------------------------------|---|------------------------------------------------------------------------------------------------------------|
 | `minimal-non-star-shaped`        | ![minimal non-star-shaped](figs/minimal_non_star_shaped.png)               | — | Fixed mesh, no parameters                                                                                  |
 | `minimal-non-star-shaped-domain` | ![minimal non star-shaped domain](figs/minimal_non_star_shaped_domain.png) | — | Fixed mesh, no parameters. Same connectivity as the minimal non-star-shaped mesh, but star-shaped.         |
-| `rod`                            | ![rod](figs/rod.png)                                                       | `--length` (default: 10)<br>`--axial-scaling` (default: 1.0)<br>`--torsion-rad` (default: 0.0) | Straight rod mesh; torsion twists the cross-sections along the axis                                        |
-| `sine`                           | ![sine](figs/sine.png)                                                     | `--length` (default: 10)<br>`--axial-scaling` (default: 1.0)<br>`--torsion-rad` (default: 0.0)<br>`--sine-period` (default: 1.0)<br>`--sine-x-scale` (default: 1.0)<br>`--sine-y-scale` (default: 1.0)<br>`--sine-z-scale` (default: 1.0) | Rod mesh deformed along a sine wave                                                                        |
+| `rod`   <a id="rod_fig"></a>     | ![rod](figs/rod.png)                                                       | `--length` (default: 10)<br>`--axial-scaling` (default: 1.0)<br>`--torsion-rad` (default: 0.0) | Straight rod mesh; torsion twists the cross-sections along the axis                                        |
+| `sine`  <a id="sine_fig"></a>    | ![sine](figs/sine.png)                                                     | `--length` (default: 10)<br>`--axial-scaling` (default: 1.0)<br>`--torsion-rad` (default: 0.0)<br>`--sine-period` (default: 1.0)<br>`--sine-x-scale` (default: 1.0)<br>`--sine-y-scale` (default: 1.0)<br>`--sine-z-scale` (default: 1.0) | Rod mesh deformed along a sine wave                                                                        |
 | `spiral`                         | ![spiral](figs/spiral.png)                                                 | `--length` (default: 10)<br>`--torsion-rad` (default: 0.0)<br>`--spiral-x-scale` (default: 1.0)<br>`--spiral-turn-count` (default: 1.0) | Rod mesh wound into a spiral                                                                               |
 | `trefoil-knot`                   | ![trefoil knot](figs/trefoil_knot.png)                                     | `--length` (default: 10)<br>`--torsion-rad` (default: 0.0)<br>`--trefoil-range` (default: 1.0) | Rod mesh deformed into a trefoil knot; `--trefoil-range` controls how much of the knot is generated [0..1] |
 | `layer`                          | ![layer](figs/layer.png)                                                   | `--width` (default: 10)<br>`--height` (default: 10) | Flat width × height layer mesh                                                                             |
@@ -59,7 +60,7 @@ Run `./cli/tet_weave --help` for the full list of options.
 
 ### Parametric Curve Meshes
 
-A rod mesh is deformed so that its central axis follows a parametric curve `f(t) → R³`. The `--para-t` range controls the portion of the curve to generate, `--length` controls the number of segments, and `--para-thickness` controls the tube radius.
+A rod mesh is deformed so that its central axis follows a parametric curve `c(t) → R³`. The `--para-t` range controls the portion of the curve to generate, `--length` controls the number of segments, and `--para-thickness` controls the tube radius.
 
 | Mesh Type | Preview                                                   | Arguments | Notes |
 |---|-----------------------------------------------------------|---|---|
@@ -85,11 +86,11 @@ A layer mesh is deformed so that its central surface follows a parametric surfac
 
 ## Output Formats
 
-| Format | Flag | Notes |
-|---|---|---|
-| `.ovm` | — | Full volumetric mesh (OpenVolumeMesh ASCII format) |
-| `.obj` | — | Surface mesh only (Wavefront OBJ, compatible with Blender) |
-| Boundary only | `--boundary-only` | Exports only the outer surface, works with both `.ovm` and `.obj` |
+| Format | Flag | Notes                                                                                         |
+|---|---|-----------------------------------------------------------------------------------------------|
+| `.ovm` | — | Full volumetric mesh, with explicit cells. (OpenVolumeMesh ASCII format)                      |
+| `.obj` | — | Without explicit cells, but with all interior faces. (Wavefront OBJ) |
+| Boundary only | `--boundary-only` | Exports only the outer surface, works with both `.ovm` and `.obj`                             |
 
 Example — generate a torus and export both the full mesh and its boundary:
 
@@ -115,7 +116,7 @@ To add a new curve, add a function with this signature to `ParametricFunctions.h
 Vec3d my_curve(const std::vector<double>& params, double t) {
     // params contains your custom parameters
     // t is the curve parameter
-    return { ... };
+    return { x(t), y(t), z(t) };
 }
 ```
 
@@ -123,10 +124,10 @@ For a surface:
 
 ```cpp
 Vec3d my_surface(const std::vector<double>& params, double u, double v) {
-    return { ... };
+    return { x(u,v), y(u,v), z(u,v) };
 }
 ```
 
-Then add it to the dispatch table in `main.cpp`.
+Then add it to the dispatch table in `cli/ArgsDispatch.cc` (if you want to use it with the cli).
 
 
