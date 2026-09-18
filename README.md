@@ -1,4 +1,4 @@
-# TetWeave
+# TetSweep
 
 ![CI](https://github.com/vnigolian/TetWeave/actions/workflows/ci.yml/badge.svg)
 
