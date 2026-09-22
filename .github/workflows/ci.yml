@@ -86,6 +86,9 @@ jobs:
           restore-keys: |
             build-${{ matrix.config.name }}-${{ runner.os }}-
 
+      - name: Clear stale CMakeCache if paths changed
+        run: rm -f build/CMakeCache.txt
+
       - name: Configure (Linux)
         if: runner.os == 'Linux'
         env:
