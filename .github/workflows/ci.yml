@@ -62,9 +62,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Clear build cache
-        run: cmake -E remove_directory build
-
       - name: Cache apt packages (Linux only)
         if: runner.os == 'Linux'
         uses: actions/cache@v4
@@ -78,6 +75,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake build-essential clang
 
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: build-${{ matrix.config.name }}-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', '**/*.cpp', '**/*.hh') }}
+          restore-keys: |
+            build-${{ matrix.config.name }}-${{ runner.os }}-
 
       - name: Configure (Linux)
         if: runner.os == 'Linux'
