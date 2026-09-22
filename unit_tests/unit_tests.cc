@@ -10,7 +10,7 @@
 #include "ParametricMeshGen.hh"
 
 
-using namespace tet_weave;
+using namespace tet_sweep;
 
 //from googletest primer
 TEST(CompileTest, BasicTest) {
@@ -864,7 +864,7 @@ TEST(TetMeshTest, TotalUnsignedVolumeOppositeOrientations) {
 class TetMeshOvmTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        path_ = std::filesystem::temp_directory_path() / "tet_weave_test.ovm";
+        path_ = std::filesystem::temp_directory_path() / "tet_sweep_test.ovm";
     }
     void TearDown() override {
         std::filesystem::remove(path_);
@@ -999,7 +999,7 @@ TEST_F(TetMeshOvmTest, EmptyMeshWritesAllSections) {
 class TetMeshBoundaryOvmTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        path_ = std::filesystem::temp_directory_path() / "tet_weave_boundary_test.ovm";
+        path_ = std::filesystem::temp_directory_path() / "tet_sweep_boundary_test.ovm";
     }
     void TearDown() override {
         std::filesystem::remove(path_);
@@ -1096,7 +1096,7 @@ TEST_F(TetMeshBoundaryOvmTest, DefaultArgumentIsFullExport) {
 
 TEST_F(TetMeshBoundaryOvmTest, BoundaryAndFullExportDiffer) {
     TetMesh m = make_single_tet();
-    auto path_full = std::filesystem::temp_directory_path() / "tet_weave_full_test.ovm";
+    auto path_full = std::filesystem::temp_directory_path() / "tet_sweep_full_test.ovm";
     write_to_file(m, path_,      true);
     write_to_file(m, path_full,  false);
     EXPECT_NE(read_file(path_), read_file(path_full));
@@ -1121,7 +1121,7 @@ TEST(TetMeshBoundaryTest, UnsupportedExtensionThrowsWithBoundaryOnly) {
 class TetMeshObjTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        path_ = std::filesystem::temp_directory_path() / "tet_weave_test.obj";
+        path_ = std::filesystem::temp_directory_path() / "tet_sweep_test.obj";
     }
     void TearDown() override {
         std::filesystem::remove(path_);
@@ -2950,7 +2950,7 @@ protected:
     void SetUp() override {
         //check_cli_binary_exists();
         ASSERT_TRUE(std::filesystem::exists(CLI_BINARY_PATH))<< "CLI binary not found at: " << CLI_BINARY_PATH
-                                                             << " — make sure the tet_weave target is built";
+                                                             << " — make sure the tet_sweep target is built";
     }
 
     void TearDown() override{

@@ -3,7 +3,7 @@
 #include "Vec3d.hh"
 
 
-namespace tet_weave {
+namespace tet_sweep {
 
 // =============================================================================
 // Handles — thin wrappers around an int index, à la OpenVolumeMesh
@@ -509,4 +509,4 @@ class TetMesh {
     }
 
 
-} // namespace tet_weave
+} // namespace tet_sweep

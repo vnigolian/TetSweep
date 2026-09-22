@@ -2,7 +2,7 @@
 
 #include "Vec3d.hh"
 
-namespace tet_weave{
+namespace tet_sweep{
 
 
     using ParametricCurve = Vec3d(*)(const std::vector<double>&, double);

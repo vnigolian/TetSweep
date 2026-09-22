@@ -25,7 +25,7 @@ add_test(NAME unit_tests COMMAND $<TARGET_FILE:unit_tests>)
 set(REF_MESH_DIR "${CMAKE_SOURCE_DIR}/unit_tests/ref_meshes")
 target_compile_definitions(unit_tests PRIVATE
         REF_MESH_DIR="${REF_MESH_DIR}"
-        CLI_BINARY_PATH="$<TARGET_FILE:tet_weave>"
+        CLI_BINARY_PATH="$<TARGET_FILE:tet_sweep>"
 )
 
 include(GoogleTest)

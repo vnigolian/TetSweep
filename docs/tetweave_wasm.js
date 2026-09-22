@@ -3,7 +3,7 @@
 
 // Single threaded MINIMAL_RUNTIME programs do not need access to
 // document.currentScript, so a simple export declaration is enough.
-var TetWeaveModule = (() => {
+var TetSweepModule = (() => {
   // When MODULARIZE this JS may be executed later,
   // after document.currentScript is gone, so we save it.
   // In EXPORT_ES6 mode we can just use 'import.meta.url'.
@@ -507,7 +507,7 @@ function createExportWrapper(name, nargs) {
 var wasmBinaryFile;
 
 function findWasmBinary() {
-  return locateFile('tetweave_wasm.wasm');
+  return locateFile('tetsweep_wasm.wasm');
 }
 
 function getBinarySync(file) {
@@ -5388,10 +5388,10 @@ for (const prop of Object.keys(Module)) {
 
 // Export using a UMD style export, or ES6 exports if selected
 if (typeof exports === 'object' && typeof module === 'object') {
-  module.exports = TetWeaveModule;
+  module.exports = TetSweepModule;
   // This default export looks redundant, but it allows TS to import this
   // commonjs style module.
-  module.exports.default = TetWeaveModule;
+  module.exports.default = TetSweepModule;
 } else if (typeof define === 'function' && define['amd'])
-  define([], () => TetWeaveModule);
+  define([], () => TetSweepModule);
 

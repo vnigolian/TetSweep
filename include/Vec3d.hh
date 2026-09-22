@@ -1,7 +1,7 @@
 #pragma once
 #include <includes.hh>
 
-namespace tet_weave {
+namespace tet_sweep {
     class Vec3d {
     public:
         // -------------------------------------------------------------------------
@@ -194,4 +194,4 @@ namespace tet_weave {
         return os;
     }
 
-} // namespace tet_weave
+} // namespace tet_sweep

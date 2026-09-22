@@ -4,7 +4,7 @@
 #include "ParametricMeshGen.hh"
 #include "SimpleMeshGen.hh"
 
-namespace tet_weave {
+namespace tet_sweep {
 
     TetMesh generate_mesh_from_args(argparse::ArgumentParser& parser) {
 
@@ -295,4 +295,4 @@ namespace tet_weave {
         return 0;
     }
 
-} // namespace tet_weave
+} // namespace tet_sweep

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TetWeave — Mesh Generator</title>
+  <title>TetSweep — Mesh Generator</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -186,7 +186,7 @@
 <body>
 
 <header>
-  <h1>TetWeave</h1>
+  <h1>TetSweep</h1>
   <span>tetrahedral mesh generator</span>
 </header>
 
@@ -443,9 +443,9 @@
   });
 
   const script = document.createElement('script');
-  script.src = 'tetweave_wasm.js';
+  script.src = 'tetsweep_wasm.js';
   script.onload = () => {
-    TetWeaveModule().then(mod => {
+    TetSweepModule().then(mod => {
       wasmModule = mod;
       loading.style.display = 'none';
       genBtn.disabled = false;
@@ -461,7 +461,7 @@
     });
   };
   script.onerror = () => {
-    loading.textContent = 'tetweave_wasm.js not found — run emmake make first';
+    loading.textContent = 'tetsweep_wasm.js not found — run emmake make first';
   };
   document.head.appendChild(script);
 </script>

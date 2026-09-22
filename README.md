@@ -1,6 +1,6 @@
 # TetSweep
 
-![CI](https://github.com/vnigolian/TetWeave/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/vnigolian/TetSweep/actions/workflows/ci.yml/badge.svg)
 
 A lightweight header-only C++ library for generating tetrahedral meshes, mostly from parametric curves and surfaces, without any dependencies.
 Its main purpose is to generate stress-test cases for deformation and volumetric mapping methods.
@@ -8,7 +8,7 @@ e.g. using a [rod](#rod_fig) mesh as a domain/source mesh, and a [sine](#sine_fi
 
 Meshes can be generated as files (either in `.obj` or `.ovm` formats) using the provided cli, or integrated into other libraries (cf. `minimal_example/`).
 
-An online viewer and generator is available [here](https://vnigolian.github.io/TetWeave/).
+An online viewer and generator is available [here](https://vnigolian.github.io/TetSweep/).
 
 ## Contributing
 Feel free to contact me with new meshes or improvement suggestions, or directly make PRs.
@@ -24,10 +24,10 @@ make
 ## Usage
 
 ```bash
-./cli/tet_weave --mesh-type <type> [options] --output <file>
+./cli/tet_sweep --mesh-type <type> [options] --output <file>
 ```
 
-Run `./cli/tet_weave --help` for the full list of options.
+Run `./cli/tet_sweep --help` for the full list of options.
 
 ---
 
@@ -95,12 +95,12 @@ A layer mesh is deformed so that its central surface follows a parametric surfac
 Example — generate a torus and export both the full mesh and its boundary:
 
 ```bash
-./cli/tet_weave --mesh-type para-torus --para-args 3.0 1.0 \
+./cli/tet_sweep --mesh-type para-torus --para-args 3.0 1.0 \
     --para-u 0.0 6.283 --para-v 0.0 6.283 \
     --width 20 --height 20 --para-thickness 0.2 \
     --output torus.ovm
 
-./cli/tet_weave --mesh-type para-torus --para-args 3.0 1.0 \
+./cli/tet_sweep --mesh-type para-torus --para-args 3.0 1.0 \
     --para-u 0.0 6.283 --para-v 0.0 6.283 \
     --width 20 --height 20 --para-thickness 0.2 \
     --boundary-only --output torus_boundary.obj

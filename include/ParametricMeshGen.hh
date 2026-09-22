@@ -5,7 +5,7 @@
 #include "ParametricFunctions.hh"
 #include "SimpleMeshGen.hh"
 
-namespace tet_weave {
+namespace tet_sweep {
 
 
     namespace ParametricMeshGen {

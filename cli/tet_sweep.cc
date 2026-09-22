@@ -1,6 +1,6 @@
 #include "ArgsDispatch.hh"
 
-using namespace tet_weave;
+using namespace tet_sweep;
 
 int main(int argc, char** argv) {
     argparse::ArgumentParser parser;

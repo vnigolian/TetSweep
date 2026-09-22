@@ -4,7 +4,7 @@ set(FETCHCONTENT_QUIET OFF)
 #set(EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
 set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
 
-project(TetWeave)
+project(TetSweep)
 cmake_minimum_required(VERSION 3.19)
 
 set(CMAKE_CXX_STANDARD 20)

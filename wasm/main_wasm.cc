@@ -9,7 +9,7 @@
 #include "TetMesh.hh"
 #include "ArgsDispatch.hh"
 
-using namespace tet_weave;
+using namespace tet_sweep;
 
 extern "C" {
 
@@ -29,7 +29,7 @@ char* generate_mesh_str(const char* args_c) {
 
     // Build argc/argv
     std::vector<char*> argv;
-    argv.push_back(const_cast<char*>("tet_weave")); // argv[0]
+    argv.push_back(const_cast<char*>("tet_sweep")); // argv[0]
     for (auto& t : tokens)
         argv.push_back(const_cast<char*>(t.c_str()));
     int argc = static_cast<int>(argv.size());
@@ -42,7 +42,7 @@ char* generate_mesh_str(const char* args_c) {
         return buf;
     }
 
-    tet_weave::TetMesh mesh = generate_mesh_from_args(parser);
+    tet_sweep::TetMesh mesh = generate_mesh_from_args(parser);
     const bool boundary_only = parser.get<bool>("--boundary-only");
 
     std::ostringstream out;

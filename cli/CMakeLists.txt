@@ -13,5 +13,5 @@ endif()
 
 include_directories(../include)
 
-add_executable (tet_weave tet_weave.cc ArgsDispatch.cc)
-target_link_libraries(tet_weave  argparse)
+add_executable (tet_sweep tet_sweep.cc ArgsDispatch.cc)
+target_link_libraries(tet_sweep  argparse)

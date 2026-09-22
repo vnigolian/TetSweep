@@ -3,7 +3,7 @@
 #include "TetMesh.hh"
 
 
-namespace tet_weave{
+namespace tet_sweep{
 
 
     class VoxelGridMeshGen
