@@ -63,7 +63,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Clear build cache
-        run: rm -rf build
+        run: cmake -E remove_directory build
 
       - name: Cache apt packages (Linux only)
         if: runner.os == 'Linux'
