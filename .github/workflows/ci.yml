@@ -62,6 +62,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Clear build cache
+        run: rm -rf build
+
       - name: Cache apt packages (Linux only)
         if: runner.os == 'Linux'
         uses: actions/cache@v4
@@ -89,7 +92,7 @@ jobs:
           CC: ${{ matrix.config.cc }}
           CXX: ${{ matrix.config.cxx }}
         run: |
-          cmake --fresh -B build \
+          cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
             -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.config.linker_flags }}" \
             ${{ matrix.config.cmake_extra }}
@@ -97,10 +100,10 @@ jobs:
       - name: Configure (Windows)
         if: runner.os == 'Windows'
         run: |
-          cmake --fresh -B build -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
 
       - name: Build
-        run: cmake --fresh --build build --parallel --config ${{ matrix.config.build_type }}
+        run: cmake --build build --parallel --config ${{ matrix.config.build_type }}
 
       - name: Run tests
-        run: ctest --fresh --test-dir build --output-on-failure --build-config ${{ matrix.config.build_type }}
+        run: ctest --test-dir build --output-on-failure --build-config ${{ matrix.config.build_type }}
