@@ -467,6 +467,22 @@ class TetMesh {
             }
             //std::cout<<" -> wrote "<<written_count<<" faces"<<std::endl;
         }
+
+
+
+        template <typename OVM_MESH_T>
+        OVM_MESH_T to_OVM() const{
+            OVM_MESH_T mesh;
+            for(const auto& vh: this->vertices()){
+                mesh.add_vertex({this->vertex(vh)[0], this->vertex(vh)[1], this->vertex(vh)[2]});
+            }
+
+            for(const auto& ch: this->cells()){
+                mesh.add_cell(this->get_cell_vertices(ch));
+            }
+
+            return mesh;
+        }
     };
 
     // -------------------------------------------------------------------------
