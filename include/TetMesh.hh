@@ -470,7 +470,8 @@ class TetMesh {
 
 
 
-        template <typename OVM_MESH_T>
+        // allows to convert to OpenVolumeMesh mesh type without the dependency
+        template <typename OVM_MESH_T, typename OVM_VERTEX_HANDLE_T>
         OVM_MESH_T to_OVM() const{
             OVM_MESH_T mesh;
             for(const auto& vh: this->vertices()){
@@ -478,7 +479,11 @@ class TetMesh {
             }
 
             for(const auto& ch: this->cells()){
-                mesh.add_cell(this->get_cell_vertices(ch));
+                const auto& verts = this->get_cell_vertices(ch);
+                mesh.add_cell({OVM_VERTEX_HANDLE_T(verts[0].idx()), 
+                               OVM_VERTEX_HANDLE_T(verts[1].idx()), 
+                               OVM_VERTEX_HANDLE_T(verts[2].idx()), 
+                               OVM_VERTEX_HANDLE_T(verts[3].idx())});
             }
 
             return mesh;
